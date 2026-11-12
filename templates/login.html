@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>{{ t.login }}</h2>
+<form method="post" class="card">
+  <p><input name="phone" placeholder="Phone (e.g. 0788000001)" required></p>
+  <p><input name="pin" type="password" placeholder="PIN" required></p>
+  <button>Log in</button>
+</form>
+{% endblock %}

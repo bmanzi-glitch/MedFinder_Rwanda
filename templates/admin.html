@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>Admin</h2>
+<h3>Facilities</h3>
+<table>
+  <tr><th>Name</th><th>Type</th><th>District</th><th>Active</th></tr>
+  {% for f in facilities %}
+  <tr><td>{{ f.name }}</td><td>{{ f.type }}</td><td>{{ f.district }}</td><td>{{ 'yes' if f.is_active else 'no' }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Most often out of stock</h3>
+<table>
+  {% for r in top_out %}<tr><td>{{ r.name }}</td><td>{{ r.n }} facilities</td></tr>
+  {% else %}<tr><td class="muted">No stock-outs recorded.</td></tr>{% endfor %}
+</table>
+
+<h3>Top searches</h3>
+<table>
+  {% for r in searches %}<tr><td>{{ r.query_text }}</td><td>{{ r.n }}</td></tr>
+  {% else %}<tr><td class="muted">No searches yet.</td></tr>{% endfor %}
+</table>
+{% endblock %}

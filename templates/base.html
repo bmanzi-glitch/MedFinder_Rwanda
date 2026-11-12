@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t.title }}</title>
+  <style>
+    :root { --g:#0a7a4b; --bg:#f6f8f7; --ink:#1b2a24; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+    header { background:var(--g); color:#fff; padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    header a { color:#fff; text-decoration:none; }
+    header .sp { flex:1; }
+    main { max-width:760px; margin:0 auto; padding:16px; }
+    input, select, button { font:inherit; padding:10px; border:1px solid #bbc; border-radius:8px; }
+    button { background:var(--g); color:#fff; border:0; cursor:pointer; }
+    form.row { display:flex; gap:8px; flex-wrap:wrap; }
+    form.row input[name=q] { flex:1; min-width:160px; }
+    .card { background:#fff; border-radius:10px; padding:12px; margin:10px 0; box-shadow:0 1px 3px #0002; }
+    .badge { padding:2px 8px; border-radius:99px; font-size:.85rem; color:#fff; }
+    .in_stock{background:#0a7a4b} .low{background:#d98a00} .out{background:#b3261e} .unverified{background:#666}
+    .muted { color:#667; font-size:.9rem; }
+    table { width:100%; border-collapse:collapse; } td,th { padding:6px; text-align:left; border-bottom:1px solid #eee; }
+    .flash { background:#fff6d6; padding:8px 12px; border-radius:8px; margin:8px 0; }
+  </style>
+</head>
+<body>
+<header>
+  <a href="{{ url_for('home') }}"><strong>💊 {{ t.title }}</strong></a>
+  <span class="sp"></span>
+  <a href="?lang=en">EN</a> | <a href="?lang=rw">RW</a>
+  {% if session.user_id %}
+    <a href="{{ url_for('dashboard' if session.role=='staff' else 'admin') }}">{{ session.name }}</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+  {% else %}<a href="{{ url_for('login') }}">{{ t.login }}</a>{% endif %}
+</header>
+<main>
+  {% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body %}
+<h2>{{ t.title }}</h2>
+<form class="row" method="get">
+  <input name="q" value="{{ q }}" placeholder="{{ t.medicine }} (e.g. Paracetamol)" required>
+  <select name="district">
+    <option value="">{{ t.district }}: all</option>
+    {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
+  </select>
+  <button>{{ t.search }}</button>
+</form>
+<p class="muted">{{ t.notice }}</p>
+
+{% if results is not none %}
+  {% if not results %}<div class="card">No facility found with this medicine.</div>{% endif %}
+  {% for r in results %}
+  <div class="card">
+    <strong>{{ r.facility }}</strong> <span class="muted">({{ r.type.replace('_',' ') }}, {{ r.district }}{% if r.sector %} / {{ r.sector }}{% endif %})</span><br>
+    {{ r.medicine }} {{ r.strength }}
+    <span class="badge {{ r.status }}">{{ t[r.status] }}</span><br>
+    <span class="muted">{{ t.updated }}: {{ r.last_updated.replace('T',' ')[:16] }} UTC</span>
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}
