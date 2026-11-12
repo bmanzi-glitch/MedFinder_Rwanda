@@ -58,6 +58,17 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           {{ t.updated }} {{ r.last_updated|ago }}
         </div>
+        {% if r.status in ('in_stock', 'low') %}
+        <form method="post" action="{{ url_for('feedback') }}" class="fb">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <input type="hidden" name="facility_id" value="{{ r.facility_id }}">
+          <input type="hidden" name="medicine_id" value="{{ r.medicine_id }}">
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <span>{{ t.fb_ask }}</span>
+          <button name="found" value="1" class="btn ghost sm">{{ t.fb_yes }}</button>
+          <button name="found" value="0" class="btn ghost sm">{{ t.fb_no }}</button>
+        </form>
+        {% endif %}
       </article>
       {% endfor %}
     </div>

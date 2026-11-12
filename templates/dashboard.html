@@ -11,7 +11,8 @@
 
 <section class="panel">
   <h2>{{ t.update_h }}</h2>
-  <form method="post" style="display:grid;gap:12px;grid-template-columns:1fr" class="upd">
+  <form method="post" class="fgrid three">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <div>
       <label class="lbl" for="medicine_id">{{ t.medicine }}</label>
       <select class="inp" id="medicine_id" name="medicine_id" required>
@@ -22,27 +23,46 @@
       <label class="lbl" for="quantity">{{ t.qty }}</label>
       <input class="inp" id="quantity" name="quantity" type="number" min="0" inputmode="numeric" placeholder="{{ t.qty_ph }}" required>
     </div>
-    <div><button class="btn">{{ t.save }}</button></div>
+    <div class="end"><button class="btn">{{ t.save }}</button></div>
   </form>
-  <style>@media(min-width:720px){form.upd{grid-template-columns:2fr 1fr auto !important;align-items:end}}</style>
 </section>
 
 <section class="panel">
   <h2>{{ t.current_h }}</h2>
   <div class="tbl-wrap">
   <table>
-    <tr><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
+    <tr><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.th_alert }}</th><th>{{ t.updated }}</th></tr>
     {% for s in stock %}
     <tr>
       <td><b>{{ s.name }}</b> <span class="muted">{{ s.strength }}</span></td>
       <td class="num">{{ s.quantity }}</td>
       <td><span class="pill {{ s.status }}"><i aria-hidden="true">{{ {'in_stock':'✓','low':'!','out':'×','unverified':'?'}[s.status] }}</i>{{ t[s.status] }}</span></td>
+      <td class="muted">{{ s.min_quantity if s.min_quantity is not none else t.not_set }}</td>
       <td class="muted" title="{{ s.last_updated|kigali }}">{{ s.last_updated|ago }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">{{ t.empty_stock }}</td></tr>
+    <tr><td colspan="5" class="muted">{{ t.empty_stock }}</td></tr>
     {% endfor %}
   </table>
   </div>
+</section>
+
+<section class="panel">
+  <h2>{{ t.thr_h }}</h2>
+  <p class="muted" style="margin:-6px 0 14px">{{ t.thr_lead }}</p>
+  <form method="post" action="{{ url_for('set_threshold') }}" class="fgrid three">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <div>
+      <label class="lbl" for="t_med">{{ t.medicine }}</label>
+      <select class="inp" id="t_med" name="medicine_id" required>
+        {% for m in medicines %}<option value="{{ m.medicine_id }}">{{ m.name }} {{ m.strength }} ({{ m.form }})</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="lbl" for="t_min">{{ t.thr_label }}</label>
+      <input class="inp" id="t_min" name="min_quantity" type="number" min="0" inputmode="numeric" required>
+    </div>
+    <div class="end"><button class="btn">{{ t.thr_save }}</button></div>
+  </form>
 </section>
 {% endblock %}

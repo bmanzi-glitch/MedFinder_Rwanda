@@ -1,0 +1,7 @@
+{% if session.role == 'admin' %}
+<nav class="tabs" aria-label="Admin">
+  <a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint == 'admin' }}">{{ t.nav_overview }}</a>
+  <a href="{{ url_for('admin_facilities') }}" class="{{ 'on' if request.endpoint == 'admin_facilities' }}">{{ t.nav_facilities }}</a>
+  <a href="{{ url_for('admin_medicines') }}" class="{{ 'on' if request.endpoint == 'admin_medicines' }}">{{ t.nav_medicines }}</a>
+</nav>
+{% endif %}

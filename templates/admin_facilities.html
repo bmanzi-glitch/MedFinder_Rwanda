@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block body %}
+<h1 style="font-size:1.8rem;margin-bottom:14px">{{ t.admin_h }}</h1>
+{% include "_admin_nav.html" %}
+
+<section class="panel">
+  <h2>{{ t.fac_add_h }}</h2>
+  <form method="post" action="{{ url_for('admin_facilities') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <div class="fgrid">
+      <div class="full">
+        <label class="lbl" for="f_name">{{ t.f_name }}</label>
+        <input class="inp" id="f_name" name="name" required>
+      </div>
+      <div>
+        <label class="lbl" for="f_type">{{ t.f_type }}</label>
+        <select class="inp" id="f_type" name="type" required>
+          {% for ty in valid_types %}<option value="{{ ty }}">{{ t['type_' ~ ty] }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="lbl" for="f_district">{{ t.district }}</label>
+        <input class="inp" id="f_district" name="district" placeholder="Gasabo" required>
+      </div>
+      <div>
+        <label class="lbl" for="f_sector">{{ t.f_sector }}</label>
+        <input class="inp" id="f_sector" name="sector">
+      </div>
+      <div class="two">
+        <div><label class="lbl" for="f_lat">{{ t.f_lat }}</label><input class="inp" id="f_lat" name="lat" inputmode="decimal" placeholder="-1.9441"></div>
+        <div><label class="lbl" for="f_lng">{{ t.f_lng }}</label><input class="inp" id="f_lng" name="lng" inputmode="decimal" placeholder="30.0619"></div>
+      </div>
+    </div>
+
+    <p class="sub">{{ t.staff_first_h }}</p>
+    <div class="fgrid">
+      <div><label class="lbl" for="s_name">{{ t.s_name }}</label><input class="inp" id="s_name" name="s_name"></div>
+      <div><label class="lbl" for="s_title">{{ t.s_title }}</label><input class="inp" id="s_title" name="s_title" placeholder="Pharmacist"></div>
+      <div><label class="lbl" for="s_phone">{{ t.phone }}</label><input class="inp" id="s_phone" name="s_phone" inputmode="tel" placeholder="0788 000 002"></div>
+      <div><label class="lbl" for="s_pin">{{ t.s_pin }}</label><input class="inp" id="s_pin" name="s_pin" type="password" inputmode="numeric" maxlength="6"></div>
+    </div>
+    <p style="margin:16px 0 0"><button class="btn">{{ t.add_facility }}</button></p>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>{{ t.staff_add_h }}</h2>
+  <form method="post" action="{{ url_for('admin_staff_add') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <div class="fgrid">
+      <div>
+        <label class="lbl" for="sa_role">{{ t.role_label }}</label>
+        <select class="inp" id="sa_role" name="role">
+          <option value="staff">{{ t.role_staff }}</option>
+          <option value="manager">{{ t.role_manager }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl" for="sa_fac">{{ t.th_facility }}</label>
+        <select class="inp" id="sa_fac" name="facility_id">
+          {% for f in facilities %}<option value="{{ f.facility_id }}">{{ f.name }} ({{ f.district }})</option>{% endfor %}
+        </select>
+      </div>
+      <p class="muted full" style="margin:0">{{ t.mgr_note }}</p>
+      <div><label class="lbl" for="sa_name">{{ t.s_name }}</label><input class="inp" id="sa_name" name="s_name" required></div>
+      <div><label class="lbl" for="sa_title">{{ t.s_title }}</label><input class="inp" id="sa_title" name="s_title"></div>
+      <div><label class="lbl" for="sa_phone">{{ t.phone }}</label><input class="inp" id="sa_phone" name="s_phone" inputmode="tel" required></div>
+      <div><label class="lbl" for="sa_pin">{{ t.s_pin }}</label><input class="inp" id="sa_pin" name="s_pin" type="password" inputmode="numeric" maxlength="6" required></div>
+    </div>
+    <p style="margin:16px 0 0"><button class="btn">{{ t.add_staff }}</button></p>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>{{ t.fac_list_h }}</h2>
+  <div class="tbl-wrap"><table>
+    <tr><th>{{ t.th_name }}</th><th>{{ t.th_type }}</th><th>{{ t.th_district }}</th><th>{{ t.th_staff }}</th><th>{{ t.th_status }}</th><th>{{ t.th_action }}</th></tr>
+    {% for f in facilities %}
+    <tr>
+      <td><b>{{ f.name }}</b>{% if f.sector %} <span class="muted">{{ f.sector }}</span>{% endif %}</td>
+      <td>{{ t['type_' ~ f.type] }}</td>
+      <td>{{ f.district }}</td>
+      <td class="num">{{ f.staff_count }}</td>
+      <td>{{ t.active if f.is_active else t.inactive }}</td>
+      <td>
+        <form method="post" action="{{ url_for('admin_facility_toggle', fid=f.facility_id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <button class="btn ghost sm">{{ t.toggle_off if f.is_active else t.toggle_on }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+</section>
+{% endblock %}

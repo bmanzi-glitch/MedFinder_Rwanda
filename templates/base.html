@@ -125,6 +125,26 @@
     .login-wrap h1 { font-size:2rem; margin-bottom:6px; }
 
     @media (prefers-reduced-motion:no-preference) { .go, .btn, .chips a { transition:background .15s, filter .15s; } }
+        /* ---------- admin + forms ---------- */
+    .tabs { display:flex; gap:6px; margin:0 0 18px; border-bottom:1.5px solid var(--line); overflow-x:auto; }
+    .tabs a { text-decoration:none; padding:10px 14px; font-weight:600; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-1.5px; white-space:nowrap; }
+    .tabs a.on { color:var(--deep); border-color:var(--deep); }
+    .filterbar { display:flex; gap:8px; margin:0 0 16px; }
+    .fgrid { display:grid; gap:12px; grid-template-columns:1fr; }
+    .fgrid .two { display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+    .fgrid .end { display:flex; align-items:flex-end; }
+    @media (min-width:720px) {
+      .fgrid { grid-template-columns:repeat(2,1fr); }
+      .fgrid.three { grid-template-columns:2fr 1fr auto; }
+      .fgrid .full { grid-column:1 / -1; }
+    }
+    .fb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; padding-top:10px; border-top:1px dashed var(--line); font-size:.88rem; color:var(--muted); }
+    .btn.sm { padding:8px 14px; font-size:.9rem; }
+    .btn.ghost { background:#fff; color:var(--deep); border:1.5px solid var(--line); }
+    .btn.ghost:hover { background:var(--paper); }
+    .sub { font-weight:600; margin:20px 0 10px; }
+    .rowform { display:grid; gap:8px; grid-template-columns:1fr; align-items:center; }
+    @media (min-width:720px) { .rowform { grid-template-columns:2fr 1fr 1fr auto; } }
     .nm { white-space:nowrap; }
     @media (max-width:560px) {
       .top-in { gap:8px; padding:12px 14px; }

@@ -4,6 +4,7 @@
   <h1>{{ t.login }}</h1>
   <p class="muted" style="margin:0 0 18px">{{ t.login_lead }}</p>
   <form method="post" class="panel">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
     <div style="margin-bottom:14px">
       <label class="lbl" for="phone">{{ t.phone }}</label>
       <input class="inp" id="phone" name="phone" inputmode="tel" placeholder="0788 000 001" required autofocus>

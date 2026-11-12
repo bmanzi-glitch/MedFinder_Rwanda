@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block body %}
+<h1 style="font-size:1.8rem;margin-bottom:14px">{{ t.admin_h }}</h1>
+{% include "_admin_nav.html" %}
+
+<section class="panel">
+  <h2>{{ t.med_add_h }}</h2>
+  <form method="post" action="{{ url_for('admin_medicines') }}" class="rowform">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input class="inp" name="name" placeholder="{{ t.m_name }}" aria-label="{{ t.m_name }}" required>
+    <input class="inp" name="strength" placeholder="{{ t.m_strength }}" aria-label="{{ t.m_strength }}">
+    <input class="inp" name="form" placeholder="{{ t.m_form }}" aria-label="{{ t.m_form }}">
+    <button class="btn">{{ t.add_medicine }}</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>{{ t.med_list_h }}</h2>
+  {% for m in medicines %}
+  <form method="post" action="{{ url_for('admin_medicine_edit', mid=m.medicine_id) }}" class="rowform" style="margin-bottom:10px">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input class="inp" name="name" value="{{ m.name }}" aria-label="{{ t.m_name }}" required>
+    <input class="inp" name="strength" value="{{ m.strength or '' }}" aria-label="{{ t.m_strength }}">
+    <input class="inp" name="form" value="{{ m.form or '' }}" aria-label="{{ t.m_form }}">
+    <button class="btn ghost sm">{{ t.save_short }}</button>
+  </form>
+  {% endfor %}
+</section>
+{% endblock %}
