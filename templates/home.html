@@ -4,18 +4,18 @@
 {% block hero %}
 <section class="hero {{ 'compact' if results is not none }}">
   <div class="hero-in">
-    <h1>Find your medicine before you travel</h1>
-    <p class="lead">See which pharmacies and health centers have it in stock, so you don't make a trip for nothing.</p>
+    <h1>{{ t.hero_title }}</h1>
+    <p class="lead">{{ t.hero_lead }}</p>
 
     <form class="finder" method="get" role="search">
       <label class="field">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-        <input name="q" value="{{ q }}" placeholder="{{ t.medicine }}, e.g. Paracetamol" aria-label="{{ t.medicine }}" required autocomplete="off">
+        <input name="q" value="{{ q }}" placeholder="{{ t.medicine_ph }}" aria-label="{{ t.medicine }}" required autocomplete="off">
       </label>
       <label class="field">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
         <select name="district" aria-label="{{ t.district }}">
-          <option value="">{{ t.district }}: all</option>
+          <option value="">{{ t.district_all }}</option>
           {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
         </select>
       </label>
@@ -24,7 +24,7 @@
 
     {% if results is none %}
     <div class="chips">
-      <span>Common searches</span>
+      <span>{{ t.common }}</span>
       {% for m in ['Paracetamol','Amoxicillin','Quinine','Oxytocin','Metformin'] %}
         <a href="{{ url_for('home', q=m) }}">{{ m }}</a>
       {% endfor %}
@@ -39,12 +39,12 @@
   <div class="pull">
   {% if not results %}
     <div class="empty">
-      <h3>No facility has {{ q }}{% if district %} in {{ district }}{% endif %} yet</h3>
-      <p>Check the spelling, or try a different district. Facilities update their stock every day.</p>
-      {% if district %}<a class="btn" style="display:inline-block;text-decoration:none" href="{{ url_for('home', q=q) }}">Search all districts</a>{% endif %}
+      <h3>{{ t.empty_pre }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %} {{ t.empty_post }}</h3>
+      <p>{{ t.empty_hint }}</p>
+      {% if district %}<a class="btn" style="display:inline-block;text-decoration:none" href="{{ url_for('home', q=q) }}">{{ t.search_all }}</a>{% endif %}
     </div>
   {% else %}
-    <p class="count">{{ results|length }} result{{ '' if results|length == 1 else 's' }} for {{ q }}{% if district %} in {{ district }}{% endif %}</p>
+    <p class="count">{{ results|length }} {{ t.result_one if results|length == 1 else t.result_many }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %}</p>
     <div class="grid">
       {% for r in results %}
       <article class="res {{ r.status }}">
@@ -53,7 +53,7 @@
           <span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'in_stock':'✓','low':'!','out':'×','unverified':'?'}[r.status] }}</i>{{ t[r.status] }}</span>
         </div>
         <div class="med">{{ r.medicine }} {{ r.strength }}</div>
-        <div class="where">{{ r.type.replace('_',' ')|capitalize }} in {% if r.sector %}{{ r.sector }}, {% endif %}{{ r.district }}</div>
+        <div class="where">{{ t['type_' ~ r.type] }} {{ t.in_word }} {% if r.sector %}{{ r.sector }}, {% endif %}{{ r.district }}</div>
         <div class="when" title="{{ r.last_updated|kigali }}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           {{ t.updated }} {{ r.last_updated|ago }}

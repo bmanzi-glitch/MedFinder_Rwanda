@@ -52,7 +52,7 @@
     .hero { background:var(--deep); color:#fff; padding:28px 0 64px; }
     .hero.compact { padding:12px 0 28px; }
     .hero-in { max-width:1040px; margin:0 auto; padding:0 20px; }
-    .hero h1 { font-size:clamp(2rem,6vw,3.4rem); font-weight:700; max-width:16ch; }
+    .hero h1 { font-size:clamp(2rem,6vw,3.4rem); font-weight:700; max-width:18ch; }
     .hero p.lead { margin:14px 0 0; max-width:46ch; color:#cfe3de; font-size:1.05rem; }
     .hero.compact h1, .hero.compact p.lead { display:none; }
 
@@ -148,15 +148,15 @@
       <span class="nm">MedFinder<span class="rw" style="font-weight:600;opacity:.75"> Rwanda</span></span>
     </a>
     <span class="spacer"></span>
-    <nav class="lang" aria-label="Language">
-      <a href="?lang=en" class="{{ 'on' if lang=='en' }}">EN</a>
-      <a href="?lang=rw" class="{{ 'on' if lang=='rw' }}">RW</a>
+    <nav class="lang" aria-label="EN / RW">
+      <a href="{{ lang_url('en') }}" class="{{ 'on' if lang=='en' }}" hreflang="en" lang="en">EN</a>
+      <a href="{{ lang_url('rw') }}" class="{{ 'on' if lang=='rw' }}" hreflang="rw" lang="rw">RW</a>
     </nav>
     {% if session.user_id %}
       <a class="who" href="{{ url_for('dashboard' if session.role=='staff' else 'admin') }}">{{ session.name }}</a>
-      <a class="navlink" href="{{ url_for('logout') }}">Log out</a>
+      <a class="navlink" href="{{ url_for('logout') }}">{{ t.logout }}</a>
     {% else %}
-      <a class="navlink" href="{{ url_for('login') }}">{{ t.login }}</a>
+      <a class="navlink" href="{{ url_for('login') }}">{{ t.nav_login }}</a>
     {% endif %}
   </div>
 </header>

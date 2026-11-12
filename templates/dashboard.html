@@ -1,37 +1,37 @@
 {% extends "base.html" %}
 {% block body %}
 <h1 style="font-size:1.8rem">{{ facility.name }}</h1>
-<p class="muted" style="margin:4px 0 20px">{{ facility.type.replace('_',' ')|capitalize }} in {{ facility.district }}. Update your stock every day so patients see what is really available.</p>
+<p class="muted" style="margin:4px 0 20px">{{ t['type_' ~ facility.type] }} {{ t.in_word }} {{ facility.district }}. {{ t.dash_lead }}</p>
 
 <div class="stats">
-  <div class="stat"><b>{{ stock|length }}</b><span>Medicines tracked</span></div>
-  <div class="stat"><b>{{ stock|selectattr('status','in',['low'])|list|length }}</b><span>Running low</span></div>
-  <div class="stat"><b>{{ stock|selectattr('status','in',['out'])|list|length }}</b><span>Out of stock</span></div>
+  <div class="stat"><b>{{ stock|length }}</b><span>{{ t.stat_tracked }}</span></div>
+  <div class="stat"><b>{{ stock|selectattr('status','in',['low'])|list|length }}</b><span>{{ t.stat_low }}</span></div>
+  <div class="stat"><b>{{ stock|selectattr('status','in',['out'])|list|length }}</b><span>{{ t.stat_out }}</span></div>
 </div>
 
 <section class="panel">
-  <h2>Update stock</h2>
+  <h2>{{ t.update_h }}</h2>
   <form method="post" style="display:grid;gap:12px;grid-template-columns:1fr" class="upd">
     <div>
-      <label class="lbl" for="medicine_id">Medicine</label>
+      <label class="lbl" for="medicine_id">{{ t.medicine }}</label>
       <select class="inp" id="medicine_id" name="medicine_id" required>
         {% for m in medicines %}<option value="{{ m.medicine_id }}">{{ m.name }} {{ m.strength }} ({{ m.form }})</option>{% endfor %}
       </select>
     </div>
     <div>
-      <label class="lbl" for="quantity">Quantity in stock</label>
-      <input class="inp" id="quantity" name="quantity" type="number" min="0" inputmode="numeric" placeholder="0 means out of stock" required>
+      <label class="lbl" for="quantity">{{ t.qty }}</label>
+      <input class="inp" id="quantity" name="quantity" type="number" min="0" inputmode="numeric" placeholder="{{ t.qty_ph }}" required>
     </div>
-    <div><button class="btn">Save stock</button></div>
+    <div><button class="btn">{{ t.save }}</button></div>
   </form>
   <style>@media(min-width:720px){form.upd{grid-template-columns:2fr 1fr auto !important;align-items:end}}</style>
 </section>
 
 <section class="panel">
-  <h2>Current stock</h2>
+  <h2>{{ t.current_h }}</h2>
   <div class="tbl-wrap">
   <table>
-    <tr><th>Medicine</th><th>Quantity</th><th>Status</th><th>{{ t.updated }}</th></tr>
+    <tr><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
     {% for s in stock %}
     <tr>
       <td><b>{{ s.name }}</b> <span class="muted">{{ s.strength }}</span></td>
@@ -40,7 +40,7 @@
       <td class="muted" title="{{ s.last_updated|kigali }}">{{ s.last_updated|ago }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">No stock saved yet. Pick a medicine above and enter how many you have.</td></tr>
+    <tr><td colspan="4" class="muted">{{ t.empty_stock }}</td></tr>
     {% endfor %}
   </table>
   </div>

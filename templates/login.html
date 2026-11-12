@@ -2,17 +2,17 @@
 {% block body %}
 <div class="login-wrap">
   <h1>{{ t.login }}</h1>
-  <p class="muted" style="margin:0 0 18px">For pharmacy and health center staff. Log in to update your stock.</p>
+  <p class="muted" style="margin:0 0 18px">{{ t.login_lead }}</p>
   <form method="post" class="panel">
     <div style="margin-bottom:14px">
-      <label class="lbl" for="phone">Phone number</label>
+      <label class="lbl" for="phone">{{ t.phone }}</label>
       <input class="inp" id="phone" name="phone" inputmode="tel" placeholder="0788 000 001" required autofocus>
     </div>
     <div style="margin-bottom:18px">
-      <label class="lbl" for="pin">PIN</label>
+      <label class="lbl" for="pin">{{ t.pin }}</label>
       <input class="inp" id="pin" name="pin" type="password" inputmode="numeric" required>
     </div>
-    <button class="btn" style="width:100%">Log in</button>
+    <button class="btn" style="width:100%">{{ t.login_btn }}</button>
   </form>
 </div>
 {% endblock %}

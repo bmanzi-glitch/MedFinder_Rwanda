@@ -1,4 +1,4 @@
-"""MedFinder Rwanda - starter web app (Flask + SQLite)."""
+"""MedFinder Rwanda - starter web app (Flask + SQLite), English + Kinyarwanda."""
 import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -6,7 +6,7 @@ from functools import wraps
 
 from flask import (Flask, Response, flash, g, redirect, render_template,
                    request, session, url_for)
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("MEDFINDER_DB", os.path.join(BASE, "medfinder.db"))
@@ -17,18 +17,133 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-change-me")
 LOW_FRACTION_DEFAULT = 10      # used when no threshold is set
 STALE_HOURS = 48               # SRS 5.5: older than 48h => Unverified
 
+# ---------------------------------------------------------------------------
+# Translations. Every piece of text shown to users lives here, in both languages.
+# Have a native Kinyarwanda speaker review the "rw" block before the pilot.
+# ---------------------------------------------------------------------------
 STRINGS = {
-    "en": {"title": "MedFinder Rwanda", "search": "Search", "medicine": "Medicine",
-           "district": "District", "login": "Staff login",
-           "notice": "Availability may change. Please confirm with the facility.",
-           "in_stock": "In stock", "low": "Low stock", "out": "Out of stock",
-           "unverified": "Unverified", "updated": "Last updated"},
-    "rw": {"title": "MedFinder Rwanda", "search": "Shakisha", "medicine": "Umuti",
-           "district": "Akarere", "login": "Kwinjira (abakozi)",
-           "notice": "Ububiko bushobora guhinduka. Banza ubaze ikigo.",
-           "in_stock": "Urahari", "low": "Ni muke", "out": "Washize",
-           "unverified": "Ntibyemejwe", "updated": "Ivugurura rya nyuma"},
+    "en": {
+        "title": "MedFinder Rwanda",
+        # header
+        "login": "Staff login", "nav_login": "Staff login", "logout": "Log out",
+        # home
+        "hero_title": "Find your medicine before you travel",
+        "hero_lead": "See which pharmacies and health centers have it in stock, so you don't make a trip for nothing.",
+        "search": "Search", "medicine": "Medicine", "medicine_ph": "Medicine, e.g. Paracetamol",
+        "district": "District", "district_all": "All districts",
+        "common": "Common searches",
+        "result_one": "result for", "result_many": "results for", "in_word": "in",
+        "empty_pre": "No facility has", "empty_post": "yet",
+        "empty_hint": "Check the spelling, or try a different district. Facilities update their stock every day.",
+        "search_all": "Search all districts",
+        "notice": "Availability may change. Please confirm with the facility.",
+        "updated": "Last updated",
+        # statuses
+        "in_stock": "In stock", "low": "Low stock", "out": "Out of stock", "unverified": "Unverified",
+        # facility types
+        "type_pharmacy": "Pharmacy", "type_health_center": "Health center", "type_hospital": "Hospital",
+        # login
+        "login_lead": "For pharmacy and health center staff. Log in to update your stock.",
+        "phone": "Phone number", "pin": "PIN", "login_btn": "Log in",
+        "bad_login": "Invalid phone number or PIN.",
+        # dashboard
+        "dash_lead": "Update your stock every day so patients see what is really available.",
+        "stat_tracked": "Medicines tracked", "stat_low": "Running low", "stat_out": "Out of stock",
+        "update_h": "Update stock", "qty": "Quantity in stock", "qty_ph": "0 means out of stock",
+        "save": "Save stock", "current_h": "Current stock",
+        "th_medicine": "Medicine", "th_qty": "Quantity", "th_status": "Status",
+        "empty_stock": "No stock saved yet. Pick a medicine above and enter how many you have.",
+        "stock_saved": "Stock updated.", "neg_qty": "Quantity cannot be negative.",
+        "bad_input": "Choose a medicine and enter a whole number.",
+        # admin
+        "admin_h": "Admin overview", "stat_facilities": "Facilities",
+        "stat_meds_out": "Medicines out somewhere", "stat_searches": "Searches (top 10 terms)",
+        "facilities_h": "Facilities", "th_name": "Name", "th_type": "Type", "th_district": "District",
+        "active": "Active", "inactive": "Inactive",
+        "top_out_h": "Medicines most often out of stock",
+        "facility_one": "facility", "facility_many": "facilities",
+        "searches_h": "What people search for",
+        "no_out": "No stock-outs recorded.", "no_searches": "No searches yet. Try the home page.",
+        # relative time
+        "just_now": "just now", "min_ago": "{n} min ago", "h_ago": "{n} h ago",
+        "day_ago": "{n} day ago", "days_ago": "{n} days ago",
+        # SMS / USSD
+        "ussd_med": "Enter medicine name:", "ussd_district": "Enter district (e.g. Gasabo):",
+        "sms_not_found": "Not found nearby. Try another district.",
+        "sms_help": "Send: medicine district (e.g. paracetamol Gasabo)",
+        "sms_in": "In stock", "sms_low": "Low", "sms_out": "Out", "sms_unv": "Unverified",
+    },
+    "rw": {
+        "title": "MedFinder Rwanda",
+        "login": "Kwinjira (abakozi)", "nav_login": "Kwinjira", "logout": "Sohoka",
+        "hero_title": "Menya aho umuti uboneka mbere yo gukora urugendo",
+        "hero_lead": "Reba farumasi n'ibigo nderabuzima bifite umuti ushaka, kugira ngo utazapfusha ubusa urugendo.",
+        "search": "Shakisha", "medicine": "Umuti", "medicine_ph": "Umuti, urugero: Paracetamol",
+        "district": "Akarere", "district_all": "Uturere twose",
+        "common": "Ibikunze gushakishwa",
+        "result_one": "cyabonetse kuri", "result_many": "byabonetse kuri", "in_word": "i",
+        "empty_pre": "Nta kigo gifite", "empty_post": "kugeza ubu",
+        "empty_hint": "Reba uko wanditse, cyangwa ugerageze akandi karere. Ibigo bivugurura ububiko buri munsi.",
+        "search_all": "Shakisha mu turere twose",
+        "notice": "Ububiko bushobora guhinduka. Banza ubaze ikigo.",
+        "updated": "Ivugurura rya nyuma",
+        "in_stock": "Urahari", "low": "Ni muke", "out": "Washize", "unverified": "Ntibyemejwe",
+        "type_pharmacy": "Farumasi", "type_health_center": "Ikigo nderabuzima", "type_hospital": "Ibitaro",
+        "login_lead": "Ku bakozi ba farumasi n'ibigo nderabuzima. Injira kugira ngo uvugurure ububiko.",
+        "phone": "Nimero ya telefone", "pin": "PIN (umubare w'ibanga)", "login_btn": "Injira",
+        "bad_login": "Nimero ya telefone cyangwa PIN si byo.",
+        "dash_lead": "Vugurura ububiko buri munsi kugira ngo abarwayi babone ibiboneka by'ukuri.",
+        "stat_tracked": "Imiti ikurikiranwa", "stat_low": "Iri gushira", "stat_out": "Yashize",
+        "update_h": "Vugurura ububiko", "qty": "Ingano mu bubiko", "qty_ph": "0 bisobanura ko yashize",
+        "save": "Bika", "current_h": "Ububiko buriho",
+        "th_medicine": "Umuti", "th_qty": "Ingano", "th_status": "Uko bimeze",
+        "empty_stock": "Nta bubiko bubitswe. Hitamo umuti hejuru wandike ingano ufite.",
+        "stock_saved": "Ububiko bwavuguruwe.", "neg_qty": "Ingano ntishobora kuba munsi ya zeru.",
+        "bad_input": "Hitamo umuti wandike umubare wuzuye.",
+        "admin_h": "Incamake y'ubuyobozi", "stat_facilities": "Ibigo",
+        "stat_meds_out": "Imiti yashize ahantu", "stat_searches": "Ishakisha (amagambo 10 ya mbere)",
+        "facilities_h": "Ibigo", "th_name": "Izina", "th_type": "Ubwoko", "th_district": "Akarere",
+        "active": "Gikora", "inactive": "Ntigikora",
+        "top_out_h": "Imiti ikunze gushira mu bubiko",
+        "facility_one": "ikigo", "facility_many": "ibigo",
+        "searches_h": "Ibyo abantu bashakisha",
+        "no_out": "Nta muti n'umwe washize.", "no_searches": "Nta wari washakisha. Gerageza ku rupapuro rw'itangiriro.",
+        "just_now": "ubu nyine", "min_ago": "iminota {n} ishize", "h_ago": "amasaha {n} ashize",
+        "day_ago": "umunsi {n} ushize", "days_ago": "iminsi {n} ishize",
+        "ussd_med": "Andika izina ry'umuti:", "ussd_district": "Andika akarere (urugero: Gasabo):",
+        "sms_not_found": "Nta kibonetse. Gerageza akandi karere.",
+        "sms_help": "Ohereza: umuti akarere (urugero: paracetamol Gasabo)",
+        "sms_in": "Urahari", "sms_low": "Ni muke", "sms_out": "Washize", "sms_unv": "Ntibyemejwe",
+    },
 }
+DEFAULT_LANG = "en"
+
+
+def current_lang():
+    lang = session.get("lang", DEFAULT_LANG)
+    return lang if lang in STRINGS else DEFAULT_LANG
+
+
+def tr(key):
+    return STRINGS[current_lang()][key]
+
+
+@app.before_request
+def pick_language():
+    """?lang=rw / ?lang=en switches language and is remembered in the session."""
+    lang = request.args.get("lang")
+    if lang in STRINGS:
+        session["lang"] = lang
+
+
+@app.context_processor
+def inject_lang():
+    def lang_url(code):
+        """Current page URL with the language swapped, so a search is kept."""
+        args = request.args.to_dict()
+        args["lang"] = code
+        return url_for(request.endpoint, **args)
+    return {"t": STRINGS[current_lang()], "lang": current_lang(), "lang_url": lang_url}
 
 
 # ---------- database helpers ----------
@@ -64,22 +179,23 @@ KIGALI = timezone(timedelta(hours=2))
 
 @app.template_filter("kigali")
 def kigali_filter(iso):
-    """Exact time in Rwanda (UTC+2), for tooltips."""
-    return datetime.fromisoformat(iso).astimezone(KIGALI).strftime("%d %b %Y, %H:%M")
+    """Exact Rwanda time (UTC+2), numeric so it reads the same in both languages."""
+    return datetime.fromisoformat(iso).astimezone(KIGALI).strftime("%d/%m/%Y %H:%M")
 
 
 @app.template_filter("ago")
 def ago_filter(iso):
-    """Friendly relative time, e.g. '2 h ago'."""
+    """Relative time in the current language, e.g. '2 h ago' / 'amasaha 2 ashize'."""
+    S = STRINGS[current_lang()]
     secs = int((datetime.now(timezone.utc) - datetime.fromisoformat(iso)).total_seconds())
     if secs < 60:
-        return "just now"
+        return S["just_now"]
     if secs < 3600:
-        return f"{secs // 60} min ago"
+        return S["min_ago"].format(n=secs // 60)
     if secs < 86400:
-        return f"{secs // 3600} h ago"
+        return S["h_ago"].format(n=secs // 3600)
     days = secs // 86400
-    return f"{days} day{'s' if days != 1 else ''} ago"
+    return S["day_ago" if days == 1 else "days_ago"].format(n=days)
 
 
 def compute_status(quantity, last_updated, min_qty=None):
@@ -141,15 +257,6 @@ def login_required(role=None):
     return deco
 
 
-@app.context_processor
-def inject_lang():
-    lang = request.args.get("lang") or session.get("lang", "en")
-    if lang not in STRINGS:
-        lang = "en"
-    session["lang"] = lang
-    return {"t": STRINGS[lang], "lang": lang}
-
-
 # ---------- web routes ----------
 @app.route("/")
 def home():
@@ -158,7 +265,8 @@ def home():
     results = None
     if q:
         results = search_stock(q, district or None)
-        log_search("web", q, district)
+        if "lang" not in request.args:          # don't count a language switch as a new search
+            log_search("web", q, district)
     districts = [r[0] for r in db().execute("SELECT DISTINCT district FROM facility ORDER BY 1")]
     return render_template("home.html", q=q, district=district, results=results, districts=districts)
 
@@ -173,13 +281,15 @@ def login():
             session.update(user_id=user["user_id"], role=user["role"],
                            facility_id=user["facility_id"], name=user["name"])
             return redirect(url_for("dashboard" if user["role"] == "staff" else "admin"))
-        flash("Invalid phone number or PIN.")
+        flash(tr("bad_login"))
     return render_template("login.html")
 
 
 @app.route("/logout")
 def logout():
+    lang = current_lang()
     session.clear()
+    session["lang"] = lang          # keep the chosen language after logging out
     return redirect(url_for("home"))
 
 
@@ -188,10 +298,14 @@ def logout():
 def dashboard():
     fid = session["facility_id"]
     if request.method == "POST":
-        med_id = int(request.form["medicine_id"])
-        qty = int(request.form["quantity"])
+        try:
+            med_id = int(request.form["medicine_id"])
+            qty = int(request.form["quantity"])
+        except (KeyError, ValueError):
+            flash(tr("bad_input"))
+            return redirect(url_for("dashboard"))
         if qty < 0:
-            flash("Quantity cannot be negative.")
+            flash(tr("neg_qty"))
             return redirect(url_for("dashboard"))
         ts = now_iso()
         c = db()
@@ -211,7 +325,7 @@ def dashboard():
                       (fid, med_id, f"Low stock: {name} ({qty} left)", ts))
             # TODO: send via SMS gateway (see send_sms below)
         c.commit()
-        flash("Stock updated.")
+        flash(tr("stock_saved"))
         return redirect(url_for("dashboard"))
 
     facility = db().execute("SELECT * FROM facility WHERE facility_id=?", (fid,)).fetchone()
@@ -238,45 +352,61 @@ def admin():
     return render_template("admin.html", facilities=facilities, top_out=top_out, searches=searches)
 
 
-# ---------- SMS / USSD (Africa's Talking-style webhook) ----------
-def format_sms(results, limit=3):
+# ---------- SMS / USSD (Africa's Talking-style webhooks) ----------
+def format_sms(results, lang="en", limit=3):
+    S = STRINGS[lang]
     if not results:
-        return "Not found nearby. Try another district."
-    lines = []
-    for r in results[:limit]:
-        label = {"in_stock": "In stock", "low": "Low", "out": "Out", "unverified": "Unverified"}[r["status"]]
-        lines.append(f"{r['facility']} ({r['district']}): {label}")
+        return S["sms_not_found"]
+    label = {"in_stock": S["sms_in"], "low": S["sms_low"], "out": S["sms_out"], "unverified": S["sms_unv"]}
+    lines = [f"{r['facility']} ({r['district']}): {label[r['status']]}" for r in results[:limit]]
     return "\n".join(lines)[:160]
 
 
 @app.route("/ussd", methods=["POST"])
 def ussd():
-    """Menu: 1 -> medicine name -> district -> result. `text` is '*'-joined inputs."""
-    parts = request.form.get("text", "").split("*") if request.form.get("text") else []
-    if len(parts) == 0:
-        resp = "CON MedFinder Rwanda\n1. Find a medicine\n2. Kinyarwanda"
-    elif parts[0] == "1" and len(parts) == 1:
-        resp = "CON Enter medicine name:"
-    elif parts[0] == "1" and len(parts) == 2:
-        resp = "CON Enter district (e.g. Gasabo):"
-    elif parts[0] == "1" and len(parts) >= 3:
-        results = search_stock(parts[1], parts[2])
-        log_search("ussd", parts[1], parts[2])
-        resp = "END " + format_sms(results)
+    """First screen picks the language (1 English, 2 Kinyarwanda), then:
+    medicine name -> district -> result. `text` is the '*'-joined inputs."""
+    text = request.form.get("text", "")
+    parts = text.split("*") if text else []
+    if not parts:
+        resp = "CON MedFinder Rwanda\n1. English\n2. Kinyarwanda"
     else:
-        resp = "END Invalid choice."
+        lang = {"1": "en", "2": "rw"}.get(parts[0])
+        if not lang:
+            resp = "END Invalid choice. / Amahitamo si yo."
+        else:
+            S = STRINGS[lang]
+            if len(parts) == 1:
+                resp = "CON " + S["ussd_med"]
+            elif len(parts) == 2:
+                resp = "CON " + S["ussd_district"]
+            else:
+                results = search_stock(parts[1], parts[2])
+                log_search("ussd", parts[1], parts[2])
+                resp = "END " + format_sms(results, lang)
     return Response(resp, mimetype="text/plain")
 
 
 @app.route("/sms", methods=["POST"])
 def sms_inbound():
-    """Inbound SMS like 'paracetamol Gasabo' -> reply text."""
-    text = request.form.get("text", "").strip().split()
-    if len(text) < 2:
-        return Response("Send: medicine district (e.g. paracetamol Gasabo)", mimetype="text/plain")
-    med, district = text[0], text[-1]
-    log_search("sms", med, district)
-    return Response(format_sms(search_stock(med, district)), mimetype="text/plain")
+    """Inbound SMS: '[rw|en] medicine district', e.g. 'paracetamol Gasabo' or 'rw amoxicillin 250mg Gasabo'.
+    The last word is the district, everything before it is the medicine. Replies in the chosen language."""
+    tokens = request.form.get("text", "").strip().split()
+    lang = "en"
+    if tokens and tokens[0].lower() in ("rw", "en"):
+        lang = tokens[0].lower()
+        tokens = tokens[1:]
+    if len(tokens) < 2:
+        return Response(STRINGS[lang]["sms_help"], mimetype="text/plain")
+    med_words, district = tokens[:-1], tokens[-1]
+    # "amoxicillin 250mg" -> try the full text first, then drop words from the end until something matches
+    results = []
+    for n in range(len(med_words), 0, -1):
+        results = search_stock(" ".join(med_words[:n]), district)
+        if results:
+            break
+    log_search("sms", " ".join(med_words), district)
+    return Response(format_sms(results, lang), mimetype="text/plain")
 
 
 def send_sms(phone, message):

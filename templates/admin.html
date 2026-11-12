@@ -1,37 +1,37 @@
 {% extends "base.html" %}
 {% block body %}
-<h1 style="font-size:1.8rem;margin-bottom:18px">Admin overview</h1>
+<h1 style="font-size:1.8rem;margin-bottom:18px">{{ t.admin_h }}</h1>
 
 <div class="stats">
-  <div class="stat"><b>{{ facilities|length }}</b><span>Facilities</span></div>
-  <div class="stat"><b>{{ top_out|length }}</b><span>Medicines out somewhere</span></div>
-  <div class="stat"><b>{{ searches|sum(attribute='n') }}</b><span>Searches (top 10 terms)</span></div>
+  <div class="stat"><b>{{ facilities|length }}</b><span>{{ t.stat_facilities }}</span></div>
+  <div class="stat"><b>{{ top_out|length }}</b><span>{{ t.stat_meds_out }}</span></div>
+  <div class="stat"><b>{{ searches|sum(attribute='n') }}</b><span>{{ t.stat_searches }}</span></div>
 </div>
 
 <section class="panel">
-  <h2>Facilities</h2>
+  <h2>{{ t.facilities_h }}</h2>
   <div class="tbl-wrap"><table>
-    <tr><th>Name</th><th>Type</th><th>District</th><th>Status</th></tr>
+    <tr><th>{{ t.th_name }}</th><th>{{ t.th_type }}</th><th>{{ t.th_district }}</th><th>{{ t.th_status }}</th></tr>
     {% for f in facilities %}
-    <tr><td><b>{{ f.name }}</b></td><td>{{ f.type.replace('_',' ')|capitalize }}</td><td>{{ f.district }}</td>
-        <td>{{ 'Active' if f.is_active else 'Inactive' }}</td></tr>
+    <tr><td><b>{{ f.name }}</b></td><td>{{ t['type_' ~ f.type] }}</td><td>{{ f.district }}</td>
+        <td>{{ t.active if f.is_active else t.inactive }}</td></tr>
     {% endfor %}
   </table></div>
 </section>
 
 <section class="panel">
-  <h2>Medicines most often out of stock</h2>
+  <h2>{{ t.top_out_h }}</h2>
   <div class="tbl-wrap"><table>
-    {% for r in top_out %}<tr><td><b>{{ r.name }}</b></td><td class="num">{{ r.n }} {{ 'facility' if r.n == 1 else 'facilities' }}</td></tr>
-    {% else %}<tr><td class="muted">No stock-outs recorded.</td></tr>{% endfor %}
+    {% for r in top_out %}<tr><td><b>{{ r.name }}</b></td><td class="num">{{ r.n }} {{ t.facility_one if r.n == 1 else t.facility_many }}</td></tr>
+    {% else %}<tr><td class="muted">{{ t.no_out }}</td></tr>{% endfor %}
   </table></div>
 </section>
 
 <section class="panel">
-  <h2>What people search for</h2>
+  <h2>{{ t.searches_h }}</h2>
   <div class="tbl-wrap"><table>
     {% for r in searches %}<tr><td><b>{{ r.query_text }}</b></td><td class="num">{{ r.n }}</td></tr>
-    {% else %}<tr><td class="muted">No searches yet. Try the home page.</td></tr>{% endfor %}
+    {% else %}<tr><td class="muted">{{ t.no_searches }}</td></tr>{% endfor %}
   </table></div>
 </section>
 {% endblock %}
