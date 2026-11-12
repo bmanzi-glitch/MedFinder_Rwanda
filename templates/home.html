@@ -1,25 +1,72 @@
 {% extends "base.html" %}
-{% block body %}
-<h2>{{ t.title }}</h2>
-<form class="row" method="get">
-  <input name="q" value="{{ q }}" placeholder="{{ t.medicine }} (e.g. Paracetamol)" required>
-  <select name="district">
-    <option value="">{{ t.district }}: all</option>
-    {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
-  </select>
-  <button>{{ t.search }}</button>
-</form>
-<p class="muted">{{ t.notice }}</p>
+{% block mainclass %}flush{% endblock %}
 
-{% if results is not none %}
-  {% if not results %}<div class="card">No facility found with this medicine.</div>{% endif %}
-  {% for r in results %}
-  <div class="card">
-    <strong>{{ r.facility }}</strong> <span class="muted">({{ r.type.replace('_',' ') }}, {{ r.district }}{% if r.sector %} / {{ r.sector }}{% endif %})</span><br>
-    {{ r.medicine }} {{ r.strength }}
-    <span class="badge {{ r.status }}">{{ t[r.status] }}</span><br>
-    <span class="muted">{{ t.updated }}: {{ r.last_updated.replace('T',' ')[:16] }} UTC</span>
+{% block hero %}
+<section class="hero {{ 'compact' if results is not none }}">
+  <div class="hero-in">
+    <h1>Find your medicine before you travel</h1>
+    <p class="lead">See which pharmacies and health centers have it in stock, so you don't make a trip for nothing.</p>
+
+    <form class="finder" method="get" role="search">
+      <label class="field">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input name="q" value="{{ q }}" placeholder="{{ t.medicine }}, e.g. Paracetamol" aria-label="{{ t.medicine }}" required autocomplete="off">
+      </label>
+      <label class="field">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        <select name="district" aria-label="{{ t.district }}">
+          <option value="">{{ t.district }}: all</option>
+          {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="go">{{ t.search }}</button>
+    </form>
+
+    {% if results is none %}
+    <div class="chips">
+      <span>Common searches</span>
+      {% for m in ['Paracetamol','Amoxicillin','Quinine','Oxytocin','Metformin'] %}
+        <a href="{{ url_for('home', q=m) }}">{{ m }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
-  {% endfor %}
+</section>
+{% endblock %}
+
+{% block body %}
+{% if results is not none %}
+  <div class="pull">
+  {% if not results %}
+    <div class="empty">
+      <h3>No facility has {{ q }}{% if district %} in {{ district }}{% endif %} yet</h3>
+      <p>Check the spelling, or try a different district. Facilities update their stock every day.</p>
+      {% if district %}<a class="btn" style="display:inline-block;text-decoration:none" href="{{ url_for('home', q=q) }}">Search all districts</a>{% endif %}
+    </div>
+  {% else %}
+    <p class="count">{{ results|length }} result{{ '' if results|length == 1 else 's' }} for {{ q }}{% if district %} in {{ district }}{% endif %}</p>
+    <div class="grid">
+      {% for r in results %}
+      <article class="res {{ r.status }}">
+        <div class="res-top">
+          <h3>{{ r.facility }}</h3>
+          <span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'in_stock':'✓','low':'!','out':'×','unverified':'?'}[r.status] }}</i>{{ t[r.status] }}</span>
+        </div>
+        <div class="med">{{ r.medicine }} {{ r.strength }}</div>
+        <div class="where">{{ r.type.replace('_',' ')|capitalize }} in {% if r.sector %}{{ r.sector }}, {% endif %}{{ r.district }}</div>
+        <div class="when" title="{{ r.last_updated|kigali }}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          {{ t.updated }} {{ r.last_updated|ago }}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+  </div>
 {% endif %}
+
+<div class="note" {% if results is not none %}{% else %}style="margin-top:8px"{% endif %}>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>
+  <span>{{ t.notice }}</span>
+</div>
 {% endblock %}

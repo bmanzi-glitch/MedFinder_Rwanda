@@ -59,6 +59,29 @@ def now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+KIGALI = timezone(timedelta(hours=2))
+
+
+@app.template_filter("kigali")
+def kigali_filter(iso):
+    """Exact time in Rwanda (UTC+2), for tooltips."""
+    return datetime.fromisoformat(iso).astimezone(KIGALI).strftime("%d %b %Y, %H:%M")
+
+
+@app.template_filter("ago")
+def ago_filter(iso):
+    """Friendly relative time, e.g. '2 h ago'."""
+    secs = int((datetime.now(timezone.utc) - datetime.fromisoformat(iso)).total_seconds())
+    if secs < 60:
+        return "just now"
+    if secs < 3600:
+        return f"{secs // 60} min ago"
+    if secs < 86400:
+        return f"{secs // 3600} h ago"
+    days = secs // 86400
+    return f"{days} day{'s' if days != 1 else ''} ago"
+
+
 def compute_status(quantity, last_updated, min_qty=None):
     """Return one of: out, low, in_stock, unverified (SRS FR 3.3, 5.5)."""
     age = datetime.now(timezone.utc) - datetime.fromisoformat(last_updated)
@@ -90,9 +113,10 @@ def search_stock(query, district=None):
         d = dict(r)
         d["status"] = compute_status(r["quantity"], r["last_updated"], r["min_quantity"])
         rows.append(d)
-    # available first, then most recently updated
+    # best status first, then most recently updated first
     order = {"in_stock": 0, "low": 1, "unverified": 2, "out": 3}
-    rows.sort(key=lambda x: (order[x["status"]], x["last_updated"]), reverse=False)
+    rows.sort(key=lambda x: x["last_updated"], reverse=True)   # newest first
+    rows.sort(key=lambda x: order[x["status"]])                # then best status (stable sort)
     return rows
 
 
@@ -263,4 +287,4 @@ def send_sms(phone, message):
 if __name__ == "__main__":
     if not os.path.exists(DB_PATH):
         init_db()
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
