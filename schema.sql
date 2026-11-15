@@ -58,10 +58,11 @@ CREATE TABLE IF NOT EXISTS alert_threshold (
 CREATE TABLE IF NOT EXISTS alert (
     alert_id        INTEGER PRIMARY KEY AUTOINCREMENT,
     facility_id     INTEGER NOT NULL,
-    medicine_id     INTEGER NOT NULL,
+    medicine_id     INTEGER,               -- NULL for 'stale' reminders, which are about the facility
     message         TEXT NOT NULL,
     sent_at         TEXT NOT NULL,
-    delivery_status TEXT NOT NULL DEFAULT 'pending'
+    delivery_status TEXT NOT NULL DEFAULT 'pending',
+    kind            TEXT NOT NULL DEFAULT 'low'
 );
 
 -- NFR 11: no personal data, only query text and district
@@ -70,5 +71,18 @@ CREATE TABLE IF NOT EXISTS search_request (
     channel     TEXT NOT NULL,
     query_text  TEXT NOT NULL,
     district    TEXT,
-    received_at TEXT NOT NULL
+    received_at TEXT NOT NULL,
+    result_count INTEGER
+);
+
+-- patient feedback: did the patient find the medicine? (used by /feedback and the admin accuracy report)
+CREATE TABLE IF NOT EXISTS feedback (
+    feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    facility_id INTEGER NOT NULL,
+    medicine_id INTEGER NOT NULL,
+    found INTEGER NOT NULL,
+    status_shown TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (facility_id) REFERENCES facility(facility_id),
+    FOREIGN KEY (medicine_id) REFERENCES medicine(medicine_id)
 );

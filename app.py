@@ -192,6 +192,72 @@ STRINGS = {
         "sms_in": "Urahari", "sms_low": "Ni muke", "sms_out": "Washize", "sms_unv": "Ntibyemejwe",
     },
 }
+
+# ---------------------------------------------------------------------------
+# Text for the redesigned homepage and footer.
+# Have a native Kinyarwanda speaker review the "rw" lines before the pilot.
+# ---------------------------------------------------------------------------
+HOME_STRINGS = {
+    "en": {
+        "skip_link": "Skip to main content",
+        "trust_chip": "Stock is entered by the facility's own staff",
+        "sample_h": "What a result looks like",
+        "sample_note": "Example only. This is not real stock.",
+        "sample_pharmacy": "Sample Pharmacy", "sample_hc": "Sample Health Center",
+        "sample_hosp": "Sample Hospital Pharmacy",
+        "how_h": "How it works",
+        "how1_h": "Search for a medicine",
+        "how1_p": "Type the name, for example Paracetamol. Pick your district to narrow the list.",
+        "how2_h": "Check the status",
+        "how2_p": "Each facility shows if the medicine is in stock, low or out, and when staff last updated it.",
+        "how3_h": "Call, then go",
+        "how3_p": "Confirm with the facility before you travel. Tell us if the medicine was there so the information stays honest.",
+        "browse_h": "Browse by need",
+        "cat_pain": "Pain and fever", "cat_infection": "Infections", "cat_malaria": "Malaria",
+        "cat_maternal": "Pregnancy and childbirth", "cat_diabetes": "Diabetes",
+        "trust_h": "What each status means",
+        "in_stock_d": "Staff confirmed this stock in the last {h} hours.",
+        "low_d": "Stock is running low and may run out soon.",
+        "out_d": "Staff reported that none is left.",
+        "unv_d": "Not updated in {h} hours. Call before you go.",
+        "trust_p": "In stock does not guarantee there is enough for every patient. Always confirm with the facility.",
+        "call_first": "Not updated recently. Call before you go.",
+        "directions": "Directions",
+        "footer_about": "MedFinder Rwanda helps people check if a medicine is available at pharmacies, health centers and hospitals before they travel.",
+        "footer_links": "Explore", "footer_staff": "Staff login", "footer_lang": "Language",
+    },
+    "rw": {
+        "skip_link": "Simbukira ku rupapuro nyamukuru",
+        "trust_chip": "Ububiko bwinjizwa n'abakozi b'ikigo ubwabo",
+        "sample_h": "Uko igisubizo kigaragara",
+        "sample_note": "Ni urugero gusa. Ntabwo ari ububiko nyabwo.",
+        "sample_pharmacy": "Farumasi y'icyitegererezo", "sample_hc": "Ikigo nderabuzima cy'icyitegererezo",
+        "sample_hosp": "Farumasi y'ibitaro by'icyitegererezo",
+        "how_h": "Uko bikora",
+        "how1_h": "Shakisha umuti",
+        "how1_p": "Andika izina ry'umuti, urugero Paracetamol. Hitamo akarere kugira ngo ugabanye urutonde.",
+        "how2_h": "Reba uko bimeze",
+        "how2_p": "Buri kigo kigaragaza niba umuti uhari, ari muke cyangwa washize, n'igihe abakozi bawuvugururiye bwa nyuma.",
+        "how3_h": "Hamagara, hanyuma ujyeyo",
+        "how3_p": "Banza ubaze ikigo mbere yo gukora urugendo. Tubwire niba umuti wari uhari kugira ngo amakuru agume kuba ukuri.",
+        "browse_h": "Shakisha ukurikije icyo ukeneye",
+        "cat_pain": "Ububabare n'umuriro", "cat_infection": "Indwara z'ubwandu", "cat_malaria": "Malariya",
+        "cat_maternal": "Inda no kubyara", "cat_diabetes": "Diyabete",
+        "trust_h": "Icyo buri miterere isobanura",
+        "in_stock_d": "Abakozi bemeje ububiko mu masaha {h} ashize.",
+        "low_d": "Ububiko buri gushira kandi bushobora gushira vuba.",
+        "out_d": "Abakozi bavuze ko nta musigaye.",
+        "unv_d": "Ntibyavuguruwe mu masaha {h}. Hamagara mbere yo kugenda.",
+        "trust_p": "Urahari ntibivuze ko hari uhagije ku barwayi bose. Buri gihe banza ubaze ikigo.",
+        "call_first": "Ntibyavuguruwe vuba. Hamagara mbere yo kugenda.",
+        "directions": "Inzira",
+        "footer_about": "MedFinder Rwanda ifasha abantu kureba niba umuti uboneka muri farumasi, ibigo nderabuzima n'ibitaro mbere yo gukora urugendo.",
+        "footer_links": "Urubuga", "footer_staff": "Kwinjira (abakozi)", "footer_lang": "Ururimi",
+    },
+}
+for _lang, _extra in HOME_STRINGS.items():
+    STRINGS[_lang].update(_extra)
+
 DEFAULT_LANG = "en"
 
 
@@ -305,7 +371,7 @@ def compute_status(quantity, last_updated, min_qty=None):
 
 def search_stock(query, district=None):
     sql = """
-      SELECT f.facility_id, m.medicine_id, f.name AS facility, f.type, f.district, f.sector, m.name AS medicine,
+      SELECT f.facility_id, m.medicine_id, f.name AS facility, f.type, f.district, f.sector, f.lat, f.lng, m.name AS medicine,
              m.strength, s.quantity, s.last_updated, t.min_quantity
       FROM stock_record s
       JOIN facility f ON f.facility_id = s.facility_id AND f.is_active = 1
@@ -430,7 +496,8 @@ def home():
         if "lang" not in request.args:          # don't count a language switch as a new search
             log_search("web", q, district, len(results))
     districts = [r[0] for r in db().execute("SELECT DISTINCT district FROM facility ORDER BY 1")]
-    return render_template("home.html", q=q, district=district, results=results, districts=districts)
+    return render_template("home.html", q=q, district=district, results=results, districts=districts,
+                           stale_hours=STALE_HOURS)
 
 
 @app.route("/login", methods=["GET", "POST"])

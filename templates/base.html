@@ -9,10 +9,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --deep:#0d3b36;      /* header, hero */
+      --deep:#0d3b36;      /* header, hero, footer */
       --deep-2:#14544c;
       --sun:#f5b82e;       /* search button, focus accent */
       --sun-ink:#3a2a00;
+      --teal:#14544c;      /* green for text and icons on white */
       --paper:#f3f6f5;
       --card:#ffffff;
       --ink:#14231f;
@@ -155,9 +156,23 @@
       main { padding-left:14px; padding-right:14px; }
       .hero-in { padding:0 14px; }
     }
+
+    /* ---------- skip link + footer ---------- */
+    .skip { position:absolute; left:-999px; top:8px; background:#fff; color:var(--deep); padding:10px 16px; border-radius:10px; font-weight:700; z-index:10; }
+    .skip:focus { left:12px; }
+    .foot { background:var(--deep); color:#cfe3de; margin-top:24px; }
+    .foot-in { max-width:1040px; margin:0 auto; padding:36px 20px 28px; display:grid; gap:28px; }
+    @media (min-width:720px) { .foot-in { grid-template-columns:1.6fr 1fr 1fr; } }
+    .foot h2 { font-size:1rem; color:#fff; margin-bottom:10px; }
+    .foot p { margin:0; max-width:44ch; font-size:.95rem; }
+    .foot ul { list-style:none; margin:0; padding:0; display:grid; gap:8px; font-size:.95rem; }
+    .foot a { text-decoration:none; }
+    .foot a:hover { text-decoration:underline; }
   </style>
+  {% block head %}{% endblock %}
 </head>
 <body>
+<a class="skip" href="#main">{{ t.skip_link }}</a>
 <header class="top">
   <div class="top-in">
     <a class="brand" href="{{ url_for('home') }}" aria-label="{{ t.title }}">
@@ -181,9 +196,32 @@
   </div>
 </header>
 {% block hero %}{% endblock %}
-<main class="{% block mainclass %}{% endblock %}">
+<main id="main" class="{% block mainclass %}{% endblock %}">
   {% for m in get_flashed_messages() %}<div class="flash" role="status">{{ m }}</div>{% endfor %}
   {% block body %}{% endblock %}
 </main>
+<footer class="foot">
+  <div class="foot-in">
+    <div>
+      <h2>MedFinder Rwanda</h2>
+      <p>{{ t.footer_about }}</p>
+    </div>
+    <nav aria-label="MedFinder">
+      <h2>{{ t.footer_links }}</h2>
+      <ul>
+        <li><a href="{{ url_for('home') }}">{{ t.search }}</a></li>
+        <li><a href="{{ url_for('login') }}">{{ t.footer_staff }}</a></li>
+      </ul>
+    </nav>
+    <div>
+      <h2>{{ t.footer_lang }}</h2>
+      <ul>
+        <li><a href="{{ lang_url('en') }}" hreflang="en" lang="en">English</a></li>
+        <li><a href="{{ lang_url('rw') }}" hreflang="rw" lang="rw">Kinyarwanda</a></li>
+      </ul>
+    </div>
+  </div>
+  <!-- TODO: add a real contact email or phone line here once you have one -->
+</footer>
 </body>
 </html>
