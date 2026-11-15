@@ -12,20 +12,24 @@ c = sqlite3.connect(a.DB_PATH)
 c.execute("PRAGMA foreign_keys = ON")
 now = a.now_iso()
 
+# name, type, district, sector, lat, lng  (coordinates are approximate, for the demo map only)
 facilities = [
-    ("Kimironko Pharmacy", "pharmacy", "Gasabo", "Kimironko"),
-    ("Remera Health Center", "health_center", "Gasabo", "Remera"),
-    ("Kacyiru Hospital Pharmacy", "hospital", "Gasabo", "Kacyiru"),
-    ("Nyamirambo Pharmacy", "pharmacy", "Nyarugenge", "Nyamirambo"),
+    ("Kimironko Pharmacy", "pharmacy", "Gasabo", "Kimironko", -1.9487, 30.1262),
+    ("Remera Health Center", "health_center", "Gasabo", "Remera", -1.9575, 30.1127),
+    ("Kacyiru Hospital Pharmacy", "hospital", "Gasabo", "Kacyiru", -1.9366, 30.0641),
+    ("Nyamirambo Pharmacy", "pharmacy", "Nyarugenge", "Nyamirambo", -1.9844, 30.0455),
 ]
 for f in facilities:
-    c.execute("INSERT INTO facility(name,type,district,sector) VALUES (?,?,?,?)", f)
+    c.execute("INSERT INTO facility(name,type,district,sector,lat,lng) VALUES (?,?,?,?,?,?)", f)
 
-meds = [("Paracetamol", "500mg", "tablet"), ("Amoxicillin", "250mg", "capsule"),
-        ("Quinine", "300mg", "tablet"), ("Oxytocin", "10IU", "injection"),
-        ("Metformin", "500mg", "tablet")]
+# name, strength, form, other names people search for
+meds = [("Paracetamol", "500mg", "tablet", "Panadol, Doliprane"),
+        ("Amoxicillin", "250mg", "capsule", "Amoxil"),
+        ("Quinine", "300mg", "tablet", None),
+        ("Oxytocin", "10IU", "injection", "Pitocin, Syntocinon"),
+        ("Metformin", "500mg", "tablet", "Glucophage")]
 for m in meds:
-    c.execute("INSERT INTO medicine(name,strength,form) VALUES (?,?,?)", m)
+    c.execute("INSERT INTO medicine(name,strength,form,aliases) VALUES (?,?,?,?)", m)
 
 stock = [(1, 1, 120), (1, 2, 4), (1, 3, 0), (2, 1, 60), (2, 3, 25), (2, 4, 8),
          (3, 4, 30), (3, 5, 80), (4, 1, 0), (4, 2, 50)]

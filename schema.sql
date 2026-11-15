@@ -1,4 +1,5 @@
 -- MedFinder Rwanda schema (mirrors SRS Appendix B.3 class diagram)
+-- Every statement is CREATE ... IF NOT EXISTS, so the app can run this file safely on every start.
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS facility (
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS user (
     name        TEXT NOT NULL,
     phone       TEXT NOT NULL UNIQUE,
     pin_hash    TEXT NOT NULL,
-    role        TEXT NOT NULL CHECK (role IN ('staff','admin')),
+    role        TEXT NOT NULL CHECK (role IN ('staff','admin','manager')),
     job_title   TEXT,
     facility_id INTEGER REFERENCES facility(facility_id) ON DELETE CASCADE
 );
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS medicine (
     name        TEXT NOT NULL,
     strength    TEXT,
     form        TEXT,
+    aliases     TEXT,                      -- other names people search for, e.g. brands: "Panadol, Doliprane"
     UNIQUE (name, strength, form)
 );
 
@@ -58,7 +60,7 @@ CREATE TABLE IF NOT EXISTS alert_threshold (
 CREATE TABLE IF NOT EXISTS alert (
     alert_id        INTEGER PRIMARY KEY AUTOINCREMENT,
     facility_id     INTEGER NOT NULL,
-    medicine_id     INTEGER,               -- NULL for 'stale' reminders, which are about the facility
+    medicine_id     INTEGER,               -- empty for 'stale' reminders, which are about the facility
     message         TEXT NOT NULL,
     sent_at         TEXT NOT NULL,
     delivery_status TEXT NOT NULL DEFAULT 'pending',
@@ -86,3 +88,13 @@ CREATE TABLE IF NOT EXISTS feedback (
     FOREIGN KEY (facility_id) REFERENCES facility(facility_id),
     FOREIGN KEY (medicine_id) REFERENCES medicine(medicine_id)
 );
+
+-- failed staff logins, used to slow down PIN guessing. Successful logins clear the phone's rows.
+CREATE TABLE IF NOT EXISTS login_attempt (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone        TEXT NOT NULL,
+    ip           TEXT NOT NULL,
+    attempted_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_login_attempt_phone ON login_attempt(phone, attempted_at);
+CREATE INDEX IF NOT EXISTS idx_login_attempt_ip ON login_attempt(ip, attempted_at);

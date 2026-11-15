@@ -6,7 +6,8 @@
   <title>{{ t.title }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
   <style>
     :root {
       --deep:#0d3b36;      /* header, hero, footer */
@@ -45,6 +46,8 @@
     .navlink { text-decoration:none; font-weight:600; font-size:.95rem; padding:8px 14px; border-radius:99px; border:1.5px solid #ffffff66; white-space:nowrap; }
     .navlink:hover { background:#ffffff1f; }
     .who { font-size:.9rem; color:#ffffffcc; text-decoration:none; }
+    form.inline { display:inline; margin:0; }
+    button.navlink { font-family:inherit; color:inherit; background:transparent; cursor:pointer; }
 
     main { max-width:1040px; margin:0 auto; padding:24px 20px 48px; }
     main.flush { padding-top:0; }
@@ -145,7 +148,7 @@
     .btn.ghost:hover { background:var(--paper); }
     .sub { font-weight:600; margin:20px 0 10px; }
     .rowform { display:grid; gap:8px; grid-template-columns:1fr; align-items:center; }
-    @media (min-width:720px) { .rowform { grid-template-columns:2fr 1fr 1fr auto; } }
+    @media (min-width:720px) { .rowform { grid-template-columns:2fr 1fr 1fr auto; } .rowform.five { grid-template-columns:2fr 1fr 1fr 1.6fr auto; } }
     .nm { white-space:nowrap; }
     @media (max-width:560px) {
       .top-in { gap:8px; padding:12px 14px; }
@@ -189,7 +192,10 @@
     </nav>
     {% if session.user_id %}
       <a class="who" href="{{ url_for('dashboard' if session.role=='staff' else 'admin') }}">{{ session.name }}</a>
-      <a class="navlink" href="{{ url_for('logout') }}">{{ t.logout }}</a>
+      <form class="inline" method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="navlink">{{ t.logout }}</button>
+      </form>
     {% else %}
       <a class="navlink" href="{{ url_for('login') }}">{{ t.nav_login }}</a>
     {% endif %}

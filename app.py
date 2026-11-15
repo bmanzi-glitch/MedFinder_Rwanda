@@ -1,24 +1,72 @@
 """MedFinder Rwanda - Flask + SQLite, English + Kinyarwanda."""
+import math
 import os
 import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import (Flask, Response, flash, g, redirect, render_template,
+from flask import (Flask, Response, flash, g, jsonify, redirect, render_template,
                    request, session, url_for)
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
+
+import migrate
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("MEDFINDER_DB", os.path.join(BASE, "medfinder.db"))
+PRODUCTION = os.environ.get("MEDFINDER_ENV") == "production"
+
+
+def load_secret_key():
+    """A real secret is always required. In production it must come from the SECRET_KEY environment
+    variable. On a developer machine a random key is created once and kept in .secret_key (not in git)."""
+    key = os.environ.get("SECRET_KEY", "").strip()
+    if key:
+        if len(key) < 24:
+            raise RuntimeError("SECRET_KEY is too short. Use at least 24 random characters.")
+        return key
+    if PRODUCTION:
+        raise RuntimeError("Set the SECRET_KEY environment variable before starting MedFinder in production.")
+    path = os.path.join(BASE, ".secret_key")
+    if os.path.exists(path):
+        with open(path) as f:
+            saved = f.read().strip()
+        if saved:
+            return saved
+    key = secrets.token_hex(32)
+    with open(path, "w") as f:
+        f.write(key)
+    return key
+
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-change-me")
+app.secret_key = load_secret_key()
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=PRODUCTION,            # cookies only over HTTPS in production
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+)
+if os.environ.get("MEDFINDER_BEHIND_PROXY") == "1":     # set when running behind nginx or a load balancer
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
+# ---------------------------------------------------------------------------
+# Stock freshness policy (one place, used everywhere):
+#   REMINDER_HOURS - staff get an SMS reminder, and admins see the facility as overdue
+#   STALE_HOURS    - patients see "Unverified" instead of a stock status
+# ---------------------------------------------------------------------------
 LOW_FRACTION_DEFAULT = 10      # "low" when no threshold is set
-STALE_HOURS = 48               # SRS 5.5: older than 48h => Unverified
-REMINDER_HOURS = 24            # SRS FR 5.2: remind staff after 24h without an update
+REMINDER_HOURS = 24            # SRS FR 5.2
+STALE_HOURS = 48               # SRS 5.5
 VALID_TYPES = ("pharmacy", "health_center", "hospital")
+SORTS = ("best", "recent", "distance")
+
+# Slowing down PIN guessing
+LOGIN_MAX_FAILS = 5            # failed tries per phone number ...
+LOGIN_IP_MAX_FAILS = 25        # ... and per network address ...
+LOGIN_WINDOW_MIN = 15          # ... within this many minutes
+DUMMY_HASH = generate_password_hash("not-a-real-pin")   # keeps timing the same for unknown phone numbers
 
 # ---------------------------------------------------------------------------
 # Translations. Every piece of text shown to users lives here, in both languages.
@@ -64,12 +112,13 @@ STRINGS = {
         # admin navigation + overview
         "nav_overview": "Overview", "nav_facilities": "Facilities", "nav_medicines": "Medicines",
         "admin_h": "Admin overview", "stat_facilities": "Active facilities",
-        "stat_low_now": "Low or out of stock now", "stat_stale": "Facilities with stock older than 24 h",
+        "stat_low_now": "Low or out of stock now",
+        "stat_stale": f"Facilities with stock older than {REMINDER_HOURS} h",
         "filter": "Filter",
         "low_monitor_h": "Low and out of stock now", "th_facility": "Facility",
         "no_low": "Nothing is low or out of stock.",
-        "stale_h": "Facilities with stock not updated in 24 hours", "never": "Never updated",
-        "no_stale": "All stock was updated in the last 24 hours.", "th_last": "Oldest update",
+        "stale_h": f"Facilities with stock not updated in {REMINDER_HOURS} hours", "never": "Never updated",
+        "no_stale": f"All stock was updated in the last {REMINDER_HOURS} hours.", "th_last": "Oldest update",
         "top_out_h": "Medicines most often out of stock",
         "facility_one": "facility", "facility_many": "facilities",
         "searches_h": "What people search for",
@@ -148,12 +197,13 @@ STRINGS = {
         "reminder_msg": "MedFinder: vugurura ububiko bwawe uyu munsi.",
         "nav_overview": "Incamake", "nav_facilities": "Ibigo", "nav_medicines": "Imiti",
         "admin_h": "Incamake y'ubuyobozi", "stat_facilities": "Ibigo bikora",
-        "stat_low_now": "Imiti iri gushira cyangwa yashize ubu", "stat_stale": "Ibigo bifite ububiko burengeje amasaha 24",
+        "stat_low_now": "Imiti iri gushira cyangwa yashize ubu",
+        "stat_stale": f"Ibigo bifite ububiko burengeje amasaha {REMINDER_HOURS}",
         "filter": "Shungura",
         "low_monitor_h": "Imiti iri gushira cyangwa yashize ubu", "th_facility": "Ikigo",
         "no_low": "Nta muti uri gushira cyangwa washize.",
-        "stale_h": "Ibigo bifite ububiko butavuguruwe mu masaha 24", "never": "Ntibigeze bivugurura",
-        "no_stale": "Ububiko bwose bwavuguruwe mu masaha 24 ashize.", "th_last": "Ivugurura rya kera cyane",
+        "stale_h": f"Ibigo bifite ububiko butavuguruwe mu masaha {REMINDER_HOURS}", "never": "Ntibigeze bivugurura",
+        "no_stale": f"Ububiko bwose bwavuguruwe mu masaha {REMINDER_HOURS} ashize.", "th_last": "Ivugurura rya kera cyane",
         "top_out_h": "Imiti ikunze gushira mu bubiko",
         "facility_one": "ikigo", "facility_many": "ibigo",
         "searches_h": "Ibyo abantu bashakisha",
@@ -194,17 +244,18 @@ STRINGS = {
 }
 
 # ---------------------------------------------------------------------------
-# Text for the redesigned homepage and footer.
+# Text for the homepage, search filters, map and footer.
 # Have a native Kinyarwanda speaker review the "rw" lines before the pilot.
 # ---------------------------------------------------------------------------
 HOME_STRINGS = {
     "en": {
         "skip_link": "Skip to main content",
         "trust_chip": "Stock is entered by the facility's own staff",
-        "sample_h": "What a result looks like",
-        "sample_note": "Example only. This is not real stock.",
-        "sample_pharmacy": "Sample Pharmacy", "sample_hc": "Sample Health Center",
-        "sample_hosp": "Sample Hospital Pharmacy",
+        "panel_h": "Right now",
+        "panel_facilities": "Facilities with stock listed",
+        "panel_medicines": "Medicines listed",
+        "panel_fresh": "Facilities updated in the last {h} hours",
+        "panel_last": "Latest stock update",
         "how_h": "How it works",
         "how1_h": "Search for a medicine",
         "how1_p": "Type the name, for example Paracetamol. Pick your district to narrow the list.",
@@ -225,14 +276,29 @@ HOME_STRINGS = {
         "directions": "Directions",
         "footer_about": "MedFinder Rwanda helps people check if a medicine is available at pharmacies, health centers and hospitals before they travel.",
         "footer_links": "Explore", "footer_staff": "Staff login", "footer_lang": "Language",
+        # search filters, distance, map
+        "filter_type_all": "All facility types", "sort_label": "Sort by",
+        "sort_best": "Best match", "sort_recent": "Recently updated", "sort_distance": "Nearest first",
+        "near_me": "Use my location",
+        "geo_wait": "Finding your location...",
+        "geo_fail": "We could not get your location. Allow location access in your browser and try again.",
+        "km_away": "{d} km away",
+        "view_list": "List", "view_map": "Map",
+        "map_loading": "Loading the map...",
+        "map_missing": "{n} facilities have no map location yet.",
+        "map_fail": "The map could not load. Check your internet connection. The list still works.",
+        "map_you": "You are here",
+        "m_aliases": "Other names, e.g. Panadol", "th_aliases": "Other names",
+        "too_many": "Too many failed attempts. Try again in {m} minutes.",
     },
     "rw": {
         "skip_link": "Simbukira ku rupapuro nyamukuru",
         "trust_chip": "Ububiko bwinjizwa n'abakozi b'ikigo ubwabo",
-        "sample_h": "Uko igisubizo kigaragara",
-        "sample_note": "Ni urugero gusa. Ntabwo ari ububiko nyabwo.",
-        "sample_pharmacy": "Farumasi y'icyitegererezo", "sample_hc": "Ikigo nderabuzima cy'icyitegererezo",
-        "sample_hosp": "Farumasi y'ibitaro by'icyitegererezo",
+        "panel_h": "Ubu",
+        "panel_facilities": "Ibigo bifite ububiko bwanditse",
+        "panel_medicines": "Imiti yanditswe",
+        "panel_fresh": "Ibigo byavuguruwe mu masaha {h} ashize",
+        "panel_last": "Ivugurura rya nyuma ry'ububiko",
         "how_h": "Uko bikora",
         "how1_h": "Shakisha umuti",
         "how1_p": "Andika izina ry'umuti, urugero Paracetamol. Hitamo akarere kugira ngo ugabanye urutonde.",
@@ -253,6 +319,19 @@ HOME_STRINGS = {
         "directions": "Inzira",
         "footer_about": "MedFinder Rwanda ifasha abantu kureba niba umuti uboneka muri farumasi, ibigo nderabuzima n'ibitaro mbere yo gukora urugendo.",
         "footer_links": "Urubuga", "footer_staff": "Kwinjira (abakozi)", "footer_lang": "Ururimi",
+        "filter_type_all": "Ubwoko bwose bw'ibigo", "sort_label": "Tondekanya ukurikije",
+        "sort_best": "Ibikwiriye cyane", "sort_recent": "Ibyavuguruwe vuba", "sort_distance": "Ibiri hafi mbere",
+        "near_me": "Koresha aho ndi",
+        "geo_wait": "Turashaka aho uri...",
+        "geo_fail": "Ntitwabashije kumenya aho uri. Emerera urubuga kumenya aho uri maze ugerageze.",
+        "km_away": "{d} km uvuye aho uri",
+        "view_list": "Urutonde", "view_map": "Ikarita",
+        "map_loading": "Turimo gufungura ikarita...",
+        "map_missing": "Ibigo {n} nta hantu biri ku ikarita kugeza ubu.",
+        "map_fail": "Ikarita ntiyabashije gufungura. Reba internet yawe. Urutonde rwo rurakora.",
+        "map_you": "Uri hano",
+        "m_aliases": "Andi mazina, urugero Panadol", "th_aliases": "Andi mazina",
+        "too_many": "Wagerageje inshuro nyinshi nabi. Ongera ugerageze nyuma y'iminota {m}.",
     },
 }
 for _lang, _extra in HOME_STRINGS.items():
@@ -270,7 +349,45 @@ def tr(key):
     return STRINGS[current_lang()][key]
 
 
+# ---------- database helpers ----------
+def db():
+    if "db" not in g:
+        g.db = sqlite3.connect(DB_PATH)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(_exc):
+    conn = g.pop("db", None)
+    if conn:
+        conn.close()
+
+
+def init_db():
+    """Create the database if it is missing, and add any new tables or columns to an older one."""
+    conn = sqlite3.connect(DB_PATH)
+    migrate.add_missing(conn)
+    conn.close()
+
+
+_prepared_for = None
+
+
+def prepare_db():
+    global _prepared_for
+    if _prepared_for != DB_PATH:
+        init_db()
+        _prepared_for = DB_PATH
+
+
 # ---------- request hooks ----------
+@app.before_request
+def ensure_db():
+    prepare_db()
+
+
 @app.before_request
 def pick_language():
     """?lang=rw / ?lang=en switches language and is remembered in the session."""
@@ -294,6 +411,17 @@ def csrf_protect():
             return Response(tr("csrf_error"), status=400, mimetype="text/plain")
 
 
+@app.after_request
+def security_headers(resp):
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Permissions-Policy", "geolocation=(self), camera=(), microphone=()")
+    if PRODUCTION:
+        resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return resp
+
+
 @app.context_processor
 def inject_globals():
     def lang_url(code):
@@ -303,30 +431,6 @@ def inject_globals():
         return url_for(request.endpoint, **args)
     return {"t": STRINGS[current_lang()], "lang": current_lang(),
             "lang_url": lang_url, "csrf_token": csrf_token}
-
-
-# ---------- database helpers ----------
-def db():
-    if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(_exc):
-    conn = g.pop("db", None)
-    if conn:
-        conn.close()
-
-
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    with open(os.path.join(BASE, "schema.sql")) as f:
-        conn.executescript(f.read())
-    conn.commit()
-    conn.close()
 
 
 def now_iso():
@@ -369,30 +473,77 @@ def compute_status(quantity, last_updated, min_qty=None):
     return "in_stock"
 
 
-def search_stock(query, district=None):
+# ---------- search ----------
+def like_pattern(text):
+    """'%text%' for LIKE ... ESCAPE '\\', so a typed % or _ is matched literally."""
+    esc = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{esc}%"
+
+
+def haversine_km(lat1, lng1, lat2, lng2):
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+STATUS_ORDER = {"in_stock": 0, "low": 1, "unverified": 2, "out": 3}
+
+
+def search_stock(query, district=None, ftype=None, origin=None, sort="best"):
+    """Find stock for a medicine. Every word typed must match the medicine's name, strength, form or
+    other names (brands), so 'paracetamol 500mg' and 'panadol' both work.
+    origin is (lat, lng) of the person, used for the distance and for sort='distance'."""
     sql = """
-      SELECT f.facility_id, m.medicine_id, f.name AS facility, f.type, f.district, f.sector, f.lat, f.lng, m.name AS medicine,
-             m.strength, s.quantity, s.last_updated, t.min_quantity
+      SELECT f.facility_id, m.medicine_id, f.name AS facility, f.type, f.district, f.sector, f.lat, f.lng,
+             m.name AS medicine, m.strength, m.form, s.quantity, s.last_updated, t.min_quantity
       FROM stock_record s
       JOIN facility f ON f.facility_id = s.facility_id AND f.is_active = 1
       JOIN medicine m ON m.medicine_id = s.medicine_id
       LEFT JOIN alert_threshold t
              ON t.facility_id = s.facility_id AND t.medicine_id = s.medicine_id
-      WHERE m.name LIKE ?"""
-    args = [f"%{query.strip()}%"]
+      WHERE 1 = 1"""
+    args = []
+    for word in query.split()[:6]:
+        p = like_pattern(word)
+        sql += (" AND (m.name LIKE ? ESCAPE '\\' OR m.strength LIKE ? ESCAPE '\\'"
+                " OR m.form LIKE ? ESCAPE '\\' OR m.aliases LIKE ? ESCAPE '\\')")
+        args += [p, p, p, p]
     if district:
-        sql += " AND f.district LIKE ?"
-        args.append(f"%{district.strip()}%")
+        sql += " AND f.district LIKE ? ESCAPE '\\'"
+        args.append(like_pattern(district.strip()))
+    if ftype in VALID_TYPES:
+        sql += " AND f.type = ?"
+        args.append(ftype)
     rows = []
     for r in db().execute(sql, args):
         d = dict(r)
         d["status"] = compute_status(r["quantity"], r["last_updated"], r["min_quantity"])
+        d["distance_km"] = (haversine_km(origin[0], origin[1], r["lat"], r["lng"])
+                            if origin and r["lat"] is not None and r["lng"] is not None else None)
         rows.append(d)
-    # best status first, then most recently updated first
-    order = {"in_stock": 0, "low": 1, "unverified": 2, "out": 3}
-    rows.sort(key=lambda x: x["last_updated"], reverse=True)   # newest first
-    rows.sort(key=lambda x: order[x["status"]])                # then best status (stable sort)
+    if sort == "recent":
+        rows.sort(key=lambda x: x["last_updated"], reverse=True)
+    elif sort == "distance" and origin:
+        # available medicines first, nearest first inside each group
+        rows.sort(key=lambda x: (STATUS_ORDER[x["status"]],
+                                 x["distance_km"] if x["distance_km"] is not None else 1e9))
+    else:
+        rows.sort(key=lambda x: x["last_updated"], reverse=True)   # newest first
+        rows.sort(key=lambda x: STATUS_ORDER[x["status"]])         # then best status (stable sort)
     return rows
+
+
+def parse_origin():
+    """The person's position from ?lat=&lng=, or None if missing or not a real coordinate."""
+    try:
+        lat, lng = float(request.args["lat"]), float(request.args["lng"])
+    except (KeyError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):      # also rejects nan and inf
+        return None
+    return round(lat, 4), round(lng, 4)
 
 
 def log_search(channel, query, district, result_count=None):
@@ -441,6 +592,7 @@ def stale_facilities(hours=REMINDER_HOURS):
 def send_reminders_cmd():
     """Text staff of facilities that have not updated stock in 24 hours (SRS FR 5.2). Run once a day.
     Each reminder is saved as an Alert of kind 'stale'; a facility is not texted twice within 20 hours."""
+    prepare_db()
     msg = STRINGS["en"]["reminder_msg"] + " / " + STRINGS["rw"]["reminder_msg"]
     recent_cutoff = (datetime.now(timezone.utc) - timedelta(hours=20)).isoformat(timespec="seconds")
     c = db()
@@ -485,19 +637,88 @@ def create_staff(c, name, phone, pin, facility_id, job_title="", role="staff"):
     return None
 
 
+def login_locked(c, phone, ip):
+    """True when this phone number or network address has failed too often in the last few minutes."""
+    since = (datetime.now(timezone.utc) - timedelta(minutes=LOGIN_WINDOW_MIN)).isoformat(timespec="seconds")
+    by_phone = c.execute("SELECT COUNT(*) FROM login_attempt WHERE phone=? AND attempted_at>?",
+                         (phone, since)).fetchone()[0]
+    by_ip = c.execute("SELECT COUNT(*) FROM login_attempt WHERE ip=? AND attempted_at>?",
+                      (ip, since)).fetchone()[0]
+    return by_phone >= LOGIN_MAX_FAILS or by_ip >= LOGIN_IP_MAX_FAILS
+
+
 # ---------- public routes ----------
 @app.route("/")
 def home():
     q = request.args.get("q", "").strip()
     district = request.args.get("district", "").strip()
-    results = None
+    ftype = request.args.get("type", "")
+    if ftype not in VALID_TYPES:
+        ftype = ""
+    sort = request.args.get("sort", "best")
+    if sort not in SORTS:
+        sort = "best"
+    origin = parse_origin()
+    if sort == "distance" and not origin:
+        sort = "best"
+
+    results, map_points, map_missing, stats = None, [], 0, None
     if q:
-        results = search_stock(q, district or None)
+        results = search_stock(q, district or None, ftype or None, origin, sort)
         if "lang" not in request.args:          # don't count a language switch as a new search
             log_search("web", q, district, len(results))
+        S = STRINGS[current_lang()]
+        for r in results:
+            if r["lat"] is None or r["lng"] is None:
+                map_missing += 1
+                continue
+            map_points.append({"lat": r["lat"], "lng": r["lng"], "name": r["facility"],
+                               "status": r["status"], "label": S[r["status"]],
+                               "med": f"{r['medicine']} {r['strength'] or ''}".strip()})
+    else:
+        row = db().execute("""SELECT COUNT(DISTINCT s.facility_id) AS facilities,
+                                     COUNT(DISTINCT s.medicine_id) AS medicines,
+                                     MAX(s.last_updated) AS latest
+                              FROM stock_record s
+                              JOIN facility f ON f.facility_id = s.facility_id AND f.is_active = 1""").fetchone()
+        if row["facilities"]:
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=REMINDER_HOURS)).isoformat(timespec="seconds")
+            fresh = db().execute("""SELECT COUNT(DISTINCT s.facility_id)
+                                    FROM stock_record s
+                                    JOIN facility f ON f.facility_id = s.facility_id AND f.is_active = 1
+                                    WHERE s.last_updated > ?""", (cutoff,)).fetchone()[0]
+            stats = dict(row, fresh=fresh)
+
     districts = [r[0] for r in db().execute("SELECT DISTINCT district FROM facility ORDER BY 1")]
-    return render_template("home.html", q=q, district=district, results=results, districts=districts,
-                           stale_hours=STALE_HOURS)
+    return render_template("home.html", q=q, district=district, ftype=ftype, sort=sort,
+                           lat=origin[0] if origin else "", lng=origin[1] if origin else "",
+                           results=results, districts=districts, valid_types=VALID_TYPES,
+                           map_points=map_points, map_missing=map_missing, stats=stats,
+                           stale_hours=STALE_HOURS, reminder_hours=REMINDER_HOURS)
+
+
+@app.route("/api/suggest")
+def suggest():
+    """Autocomplete for the search box: medicines that some active facility actually lists."""
+    q = request.args.get("q", "").strip()[:40]
+    if len(q) < 2:
+        return jsonify([])
+    p = like_pattern(q)
+    rows = db().execute("""SELECT m.name,
+                                  GROUP_CONCAT(DISTINCT trim(coalesce(m.strength,'') || ' ' || coalesce(m.form,''))) AS detail,
+                                  MAX(m.aliases) AS aliases
+                           FROM medicine m
+                           JOIN stock_record s ON s.medicine_id = m.medicine_id
+                           JOIN facility f ON f.facility_id = s.facility_id AND f.is_active = 1
+                           WHERE m.name LIKE ? ESCAPE '\\' OR m.aliases LIKE ? ESCAPE '\\'
+                           GROUP BY m.name ORDER BY m.name LIMIT 8""", (p, p)).fetchall()
+    out = []
+    for r in rows:
+        label = r["name"] + (f" ({r['detail']})" if r["detail"] else "")
+        if r["aliases"]:
+            label += f" - {r['aliases']}"
+        out.append({"name": r["name"], "label": label})
+    return jsonify(out)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -505,16 +726,35 @@ def login():
     if request.method == "POST":
         phone = request.form.get("phone", "").strip().replace(" ", "")
         pin = request.form.get("pin", "")
-        user = db().execute("SELECT * FROM user WHERE phone = ?", (phone,)).fetchone()
-        if user and check_password_hash(user["pin_hash"], pin):
-            session.update(user_id=user["user_id"], role=user["role"],
+        ip = request.remote_addr or "unknown"
+        c = db()
+        if login_locked(c, phone, ip):
+            flash(tr("too_many").format(m=LOGIN_WINDOW_MIN))
+            return render_template("login.html"), 429
+        user = c.execute("SELECT * FROM user WHERE phone = ?", (phone,)).fetchone()
+        if user:
+            ok = check_password_hash(user["pin_hash"], pin)
+        else:
+            check_password_hash(DUMMY_HASH, pin)        # same work whether or not the phone number exists
+            ok = False
+        if ok:
+            c.execute("DELETE FROM login_attempt WHERE phone=?", (phone,))
+            c.commit()
+            lang = current_lang()
+            session.clear()                              # fresh session on login
+            session.update(lang=lang, user_id=user["user_id"], role=user["role"],
                            facility_id=user["facility_id"], name=user["name"])
+            session.permanent = True                     # expires after 12 hours
             return redirect(url_for("dashboard" if user["role"] == "staff" else "admin"))
+        c.execute("INSERT INTO login_attempt(phone, ip, attempted_at) VALUES (?,?,?)", (phone[:40], ip, now_iso()))
+        c.execute("DELETE FROM login_attempt WHERE attempted_at < ?",
+                  ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds"),))
+        c.commit()
         flash(tr("bad_login"))
     return render_template("login.html")
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
     lang = current_lang()
     session.clear()
@@ -763,8 +1003,9 @@ def admin_medicines():
             flash(tr("med_need"))
         else:
             try:
-                db().execute("INSERT INTO medicine(name,strength,form) VALUES (?,?,?)",
-                             (name, request.form.get("strength", "").strip(), request.form.get("form", "").strip()))
+                db().execute("INSERT INTO medicine(name,strength,form,aliases) VALUES (?,?,?,?)",
+                             (name, request.form.get("strength", "").strip(), request.form.get("form", "").strip(),
+                              request.form.get("aliases", "").strip() or None))
                 db().commit()
                 flash(tr("med_added"))
             except sqlite3.IntegrityError:
@@ -782,8 +1023,9 @@ def admin_medicine_edit(mid):
         flash(tr("med_need"))
     else:
         try:
-            db().execute("UPDATE medicine SET name=?, strength=?, form=? WHERE medicine_id=?",
-                         (name, request.form.get("strength", "").strip(), request.form.get("form", "").strip(), mid))
+            db().execute("UPDATE medicine SET name=?, strength=?, form=?, aliases=? WHERE medicine_id=?",
+                         (name, request.form.get("strength", "").strip(), request.form.get("form", "").strip(),
+                          request.form.get("aliases", "").strip() or None, mid))
             db().commit()
             flash(tr("med_saved"))
         except sqlite3.IntegrityError:
@@ -849,6 +1091,5 @@ def sms_inbound():
 
 
 if __name__ == "__main__":
-    if not os.path.exists(DB_PATH):
-        init_db()
-    app.run(debug=True, use_reloader=False)
+    # Debug mode shows an interactive console to anyone who can reach the page, so it is opt-in.
+    app.run(debug=os.environ.get("MEDFINDER_DEBUG") == "1", use_reloader=False)

@@ -23,15 +23,25 @@
   .trustline { display:flex; align-items:center; gap:8px; margin:18px 0 0; color:#cfe3de; font-size:.92rem; }
   .trustline svg { flex:none; color:var(--sun); }
 
-  /* example panel: shows what a result looks like */
-  .sample { background:#fff; color:var(--ink); border-radius:18px; padding:18px 18px 14px; box-shadow:0 14px 36px #00000040; display:none; }
-  @media (min-width:960px) { .sample { display:block; } }
-  .sample h2 { font-size:1rem; margin-bottom:2px; }
-  .sample .cap { margin:0 0 10px; font-size:.82rem; color:var(--muted); }
-  .sample ul { list-style:none; margin:0; padding:0; }
-  .sample li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); }
-  .sample li b { display:block; font-size:.95rem; }
-  .sample li span.w { color:var(--muted); font-size:.85rem; }
+  /* filters under the search bar */
+  .more { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px; padding:2px 4px 4px; }
+  .more select { font:inherit; font-size:.92rem; padding:9px 12px; border:1.5px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); max-width:100%; }
+  .near { display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:.92rem; font-weight:600; cursor:pointer; padding:9px 14px; border-radius:10px; border:1.5px solid #b8c6c1; background:#fff; color:var(--deep); }
+  .near:hover { background:#e8f0ee; }
+  .near[disabled] { opacity:.6; cursor:wait; }
+  .geo-msg { margin:10px 0 0; min-height:1.2em; font-size:.92rem; color:#ffe7ad; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+  /* live numbers panel */
+  .panel-live { background:#fff; color:var(--ink); border-radius:18px; padding:20px 20px 16px; box-shadow:0 14px 36px #00000040; display:none; }
+  @media (min-width:960px) { .panel-live { display:block; } }
+  .panel-live h2 { font-size:1rem; margin-bottom:6px; color:var(--muted); font-weight:600; }
+  .panel-live dl { margin:0; }
+  .panel-live .row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+  .panel-live .row:first-of-type { border-top:0; }
+  .panel-live dt { color:var(--muted); font-size:.92rem; }
+  .panel-live dd { margin:0; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:1.5rem; }
+  .panel-live dd.small { font-family:inherit; font-size:.95rem; font-weight:600; }
 
   /* ---------- sections below the hero ---------- */
   .sec { padding:44px 0 4px; }
@@ -57,10 +67,24 @@
   .legend dd { margin:0; color:var(--muted); }
   .legend-note { margin:16px 0 0; font-weight:600; max-width:60ch; }
 
-  /* ---------- result cards ---------- */
+  /* ---------- results ---------- */
+  .resbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 12px; }
+  .resbar .count { margin:0; }
+  .viewtabs { display:inline-flex; background:#e8f0ee; border-radius:99px; padding:3px; }
+  .viewtabs button { font:inherit; font-size:.9rem; font-weight:600; border:0; background:transparent; color:var(--deep); padding:7px 18px; border-radius:99px; cursor:pointer; }
+  .viewtabs button[aria-selected="true"] { background:var(--deep); color:#fff; }
+  #map { height:min(62vh,460px); border-radius:var(--r); border:1px solid var(--line); background:#e8f0ee; }
+  #map-note { margin:8px 0 0; }
+  .pinwrap { background:none; border:0; }
+  .pin { display:block; width:22px; height:22px; border-radius:50%; border:3px solid #fff; box-shadow:0 1px 5px #0007; background:var(--c,#8b95a1); }
+  .pin.in_stock { --c:var(--ok); } .pin.low { --c:#e09a14; } .pin.out { --c:var(--out); } .pin.unverified { --c:#8b95a1; }
+  .pop strong { display:block; }
+  .pop a { font-weight:700; color:var(--teal); }
+
   .res { padding:18px 18px 14px 22px; gap:8px; }
   .res h3 { font-size:1.15rem; }
   .res .med { font-size:1.02rem; }
+  .res .dist { font-weight:600; color:var(--teal); font-size:.92rem; }
   .res .callfirst { color:var(--unv); font-size:.88rem; font-weight:600; }
   .res .acts { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:4px; }
   .res .dir { display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:700; font-size:.9rem; color:var(--teal); padding:7px 12px; border-radius:10px; border:1.5px solid #b8c6c1; }
@@ -75,10 +99,11 @@
       <h1>{{ t.hero_title }}</h1>
       <p class="lead">{{ t.hero_lead }}</p>
 
-      <form class="finder" method="get" role="search">
+      <form class="finder" method="get" role="search" id="finder">
         <label class="field">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-          <input name="q" value="{{ q }}" placeholder="{{ t.medicine_ph }}" aria-label="{{ t.medicine }}" required autocomplete="off">
+          <input name="q" id="q" value="{{ q }}" placeholder="{{ t.medicine_ph }}" aria-label="{{ t.medicine }}" list="med-list" required autocomplete="off">
+          <datalist id="med-list"></datalist>
         </label>
         <label class="field">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
@@ -88,7 +113,30 @@
           </select>
         </label>
         <button class="go">{{ t.search }}</button>
+
+        <div class="more">
+          <label><span class="sr">{{ t.f_type }}</span>
+            <select name="type">
+              <option value="">{{ t.filter_type_all }}</option>
+              {% for ty in valid_types %}<option value="{{ ty }}" {{ 'selected' if ty == ftype }}>{{ t['type_' ~ ty] }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span class="sr">{{ t.sort_label }}</span>
+            <select name="sort" id="sort">
+              <option value="best" {{ 'selected' if sort == 'best' }}>{{ t.sort_best }}</option>
+              <option value="recent" {{ 'selected' if sort == 'recent' }}>{{ t.sort_recent }}</option>
+              <option value="distance" {{ 'selected' if sort == 'distance' }}>{{ t.sort_distance }}</option>
+            </select>
+          </label>
+          <button type="button" class="near" id="near">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+            {{ t.near_me }}
+          </button>
+          <input type="hidden" name="lat" id="lat" value="{{ lat }}">
+          <input type="hidden" name="lng" id="lng" value="{{ lng }}">
+        </div>
       </form>
+      <p class="geo-msg" id="geo-msg" role="status"></p>
 
       {% if results is none %}
       <div class="chips">
@@ -104,15 +152,15 @@
       {% endif %}
     </div>
 
-    {% if results is none %}
-    <aside class="sample" aria-label="{{ t.sample_h }}">
-      <h2>{{ t.sample_h }}</h2>
-      <p class="cap">{{ t.sample_note }}</p>
-      <ul>
-        <li><div><b>{{ t.sample_pharmacy }}</b><span class="w">{{ t.type_pharmacy }}</span></div>{{ pill('in_stock') }}</li>
-        <li><div><b>{{ t.sample_hc }}</b><span class="w">{{ t.type_health_center }}</span></div>{{ pill('low') }}</li>
-        <li><div><b>{{ t.sample_hosp }}</b><span class="w">{{ t.type_hospital }}</span></div>{{ pill('out') }}</li>
-      </ul>
+    {% if results is none and stats %}
+    <aside class="panel-live" aria-label="{{ t.panel_h }}">
+      <h2>{{ t.panel_h }}</h2>
+      <dl>
+        <div class="row"><dt>{{ t.panel_facilities }}</dt><dd>{{ stats.facilities }}</dd></div>
+        <div class="row"><dt>{{ t.panel_medicines }}</dt><dd>{{ stats.medicines }}</dd></div>
+        <div class="row"><dt>{{ t.panel_fresh.format(h=reminder_hours) }}</dt><dd>{{ stats.fresh }}</dd></div>
+        <div class="row"><dt>{{ t.panel_last }}</dt><dd class="small">{{ stats.latest|ago }}</dd></div>
+      </dl>
     </aside>
     {% endif %}
   </div>
@@ -129,7 +177,17 @@
       {% if district %}<a class="btn" style="display:inline-block;text-decoration:none" href="{{ url_for('home', q=q) }}">{{ t.search_all }}</a>{% endif %}
     </div>
   {% else %}
-    <p class="count">{{ results|length }} {{ t.result_one if results|length == 1 else t.result_many }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %}</p>
+    <div class="resbar">
+      <p class="count">{{ results|length }} {{ t.result_one if results|length == 1 else t.result_many }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %}</p>
+      {% if map_points %}
+      <div class="viewtabs" role="tablist">
+        <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="list-wrap">{{ t.view_list }}</button>
+        <button type="button" role="tab" id="tab-map" aria-selected="false" aria-controls="map-wrap">{{ t.view_map }}</button>
+      </div>
+      {% endif %}
+    </div>
+
+    <div id="list-wrap">
     <div class="grid">
       {% for r in results %}
       <article class="res {{ r.status }}">
@@ -139,12 +197,13 @@
         </div>
         <div class="med">{{ r.medicine }} {{ r.strength }}</div>
         <div class="where">{{ t['type_' ~ r.type] }} {{ t.in_word }} {% if r.sector %}{{ r.sector }}, {% endif %}{{ r.district }}</div>
+        {% if r.distance_km is not none %}<div class="dist">{{ t.km_away.format(d='%.1f'|format(r.distance_km)) }}</div>{% endif %}
         <div class="when" title="{{ r.last_updated|kigali }}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           {{ t.updated }} {{ r.last_updated|ago }}
         </div>
         {% if r.status == 'unverified' %}<div class="callfirst">{{ t.call_first }}</div>{% endif %}
-        {% if r.lat and r.lng %}
+        {% if r.lat is not none and r.lng is not none %}
         <div class="acts">
           <a class="dir" href="https://www.google.com/maps/dir/?api=1&destination={{ r.lat }},{{ r.lng }}" target="_blank" rel="noopener">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg>
@@ -166,6 +225,20 @@
       </article>
       {% endfor %}
     </div>
+    </div>
+
+    {% if map_points %}
+    <div id="map-wrap" role="tabpanel" aria-labelledby="tab-map" hidden>
+      <div id="map" role="region" aria-label="{{ t.view_map }}"></div>
+      <p id="map-note" class="muted" role="status"></p>
+    </div>
+    <script id="map-data" type="application/json">{{ map_points|tojson }}</script>
+    <script id="map-cfg" type="application/json">{{ {
+      'dir': t.directions, 'you': t.map_you, 'fail': t.map_fail, 'loading': t.map_loading,
+      'missing': t.map_missing.format(n=map_missing) if map_missing else '',
+      'origin': [lat, lng] if lat != '' else none
+    }|tojson }}</script>
+    {% endif %}
   {% endif %}
   </div>
 {% else %}
@@ -203,4 +276,108 @@
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>
   <span>{{ t.notice }}</span>
 </div>
+
+<script>
+(function () {
+  var form = document.getElementById('finder');
+  var qInput = document.getElementById('q');
+
+  /* ---- autocomplete: ask the server for matching medicines while typing ---- */
+  var list = document.getElementById('med-list'), timer;
+  qInput.addEventListener('input', function () {
+    clearTimeout(timer);
+    var v = qInput.value.trim();
+    if (v.length < 2) { return; }
+    timer = setTimeout(function () {
+      fetch('{{ url_for("suggest") }}?q=' + encodeURIComponent(v))
+        .then(function (r) { return r.json(); })
+        .then(function (items) {
+          list.replaceChildren.apply(list, items.map(function (i) {
+            var o = document.createElement('option'); o.value = i.name; o.label = i.label; return o;
+          }));
+        }).catch(function () {});
+    }, 200);
+  });
+
+  /* ---- "Use my location": fill lat/lng, sort by distance, search ---- */
+  var near = document.getElementById('near'), msg = document.getElementById('geo-msg');
+  var latI = document.getElementById('lat'), lngI = document.getElementById('lng');
+  var sortSel = document.getElementById('sort');
+  var T = {{ {'wait': t.geo_wait, 'fail': t.geo_fail}|tojson }};
+  function locate() {
+    if (!navigator.geolocation) { msg.textContent = T.fail; return; }
+    msg.textContent = T.wait; near.disabled = true;
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      latI.value = pos.coords.latitude.toFixed(3);
+      lngI.value = pos.coords.longitude.toFixed(3);
+      sortSel.value = 'distance';
+      msg.textContent = ''; near.disabled = false;
+      if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+    }, function () { msg.textContent = T.fail; near.disabled = false; },
+    { timeout: 10000, maximumAge: 600000 });
+  }
+  near.addEventListener('click', locate);
+  sortSel.addEventListener('change', function () { if (sortSel.value === 'distance' && !latI.value) { locate(); } });
+  form.addEventListener('submit', function () {      /* keep the address bar tidy */
+    if (!latI.value) { latI.disabled = true; lngI.disabled = true; }
+  });
+
+  /* ---- map: Leaflet + OpenStreetMap, loaded only when the Map tab is opened ---- */
+  var dataEl = document.getElementById('map-data');
+  if (!dataEl) { return; }
+  var pts = JSON.parse(dataEl.textContent), C = JSON.parse(document.getElementById('map-cfg').textContent);
+  var tabList = document.getElementById('tab-list'), tabMap = document.getElementById('tab-map');
+  var listWrap = document.getElementById('list-wrap'), mapWrap = document.getElementById('map-wrap');
+  var note = document.getElementById('map-note'), map = null, loading = false;
+
+  function show(which) {
+    var m = which === 'map';
+    tabMap.setAttribute('aria-selected', m); tabList.setAttribute('aria-selected', !m);
+    mapWrap.hidden = !m; listWrap.hidden = m;
+    if (m) { start(); }
+  }
+  function start() {
+    if (map) { setTimeout(function () { map.invalidateSize(); }, 0); return; }
+    if (window.L) { build(); return; }
+    if (loading) { return; }
+    loading = true; note.textContent = C.loading;
+    var css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    var js = document.createElement('script');
+    js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.onload = function () { loading = false; build(); };
+    js.onerror = function () { loading = false; note.textContent = C.fail; };
+    document.head.appendChild(js);
+  }
+  function build() {
+    note.textContent = C.missing;
+    map = L.map('map');
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    var bounds = [];
+    pts.forEach(function (p) {
+      var icon = L.divIcon({ className: 'pinwrap', html: '<span class="pin ' + p.status + '"></span>',
+                             iconSize: [22, 22], iconAnchor: [11, 11] });
+      var box = document.createElement('div'); box.className = 'pop';
+      var h = document.createElement('strong'); h.textContent = p.name;
+      var m = document.createElement('div'); m.textContent = p.med + ' - ' + p.label;
+      var a = document.createElement('a');
+      a.href = 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng;
+      a.target = '_blank'; a.rel = 'noopener'; a.textContent = C.dir;
+      box.appendChild(h); box.appendChild(m); box.appendChild(a);
+      L.marker([p.lat, p.lng], { icon: icon, title: p.name }).addTo(map).bindPopup(box);
+      bounds.push([p.lat, p.lng]);
+    });
+    if (C.origin) {
+      L.circleMarker(C.origin, { radius: 8, color: '#14544c', fillColor: '#f5b82e', fillOpacity: 1 })
+        .addTo(map).bindTooltip(C.you);
+      bounds.push(C.origin);
+    }
+    if (bounds.length === 1) { map.setView(bounds[0], 15); } else { map.fitBounds(bounds, { padding: [30, 30] }); }
+  }
+  tabList.addEventListener('click', function () { show('list'); });
+  tabMap.addEventListener('click', function () { show('map'); });
+})();
+</script>
 {% endblock %}
