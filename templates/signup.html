@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_signup }} - {{ t.title }}{% endblock %}
+{% block body %}
+<div class="login-wrap">
+  <h1>{{ t.signup_h }}</h1>
+  <p class="muted">{{ t.signup_lead }}</p>
+  <form method="post" class="panel" style="margin-top:16px">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label class="lbl" for="name">{{ t.full_name }}</label>
+    <input class="inp" id="name" name="name" value="{{ form.name }}" maxlength="60" autocomplete="name" required>
+
+    <label class="lbl" for="phone" style="margin-top:12px">{{ t.phone }}</label>
+    <input class="inp" id="phone" name="phone" value="{{ form.phone }}" type="tel" inputmode="tel" autocomplete="tel" placeholder="{{ t.phone_hint }}" required>
+
+    <label class="lbl" for="pin" style="margin-top:12px">{{ t.pin_new }}</label>
+    <input class="inp" id="pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="new-password" required>
+
+    <label class="lbl" for="pin2" style="margin-top:12px">{{ t.pin_confirm }}</label>
+    <input class="inp" id="pin2" name="pin2" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="new-password" required>
+
+    <label style="display:flex;gap:10px;align-items:flex-start;margin:16px 0 0;font-size:.92rem">
+      <input type="checkbox" name="agree" value="1" required style="margin-top:4px">
+      <span>{{ t.agree_pre }} <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">{{ t.link_terms }}</a>
+        {{ t.agree_and }}{% if not t.agree_and.endswith("'") %} {% endif %}<a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">{{ t.link_privacy }}</a></span>
+    </label>
+    <button class="btn" style="margin-top:16px;width:100%">{{ t.signup_btn }}</button>
+  </form>
+  <p class="muted">{{ t.have_account }} <a href="{{ url_for('login') }}">{{ t.nav_login }}</a></p>
+</div>
+{% endblock %}

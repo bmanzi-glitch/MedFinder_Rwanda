@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ t.contact_h }} - {{ t.title }}{% endblock %}
+{% block body %}
+<article class="doc">
+  <h1>{{ t.contact_h }}</h1>
+  <p class="lead2">{{ t.contact_lead }}</p>
+  <dl class="facts">
+    {% if contact.email %}<div><dt>{{ t.contact_email }}</dt><dd><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></dd></div>{% endif %}
+    {% if contact.phone %}<div><dt>{{ t.contact_phone }}</dt><dd><a href="tel:{{ contact.phone|replace(' ', '') }}">{{ contact.phone }}</a></dd></div>{% endif %}
+    {% if contact.address %}<div><dt>{{ t.contact_address }}</dt><dd>{{ contact.address }}</dd></div>{% endif %}
+  </dl>
+</article>
+{% endblock %}

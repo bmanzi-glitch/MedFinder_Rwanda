@@ -24,20 +24,26 @@ def add_missing(conn):
         conn.executescript(f.read())          # every statement is CREATE ... IF NOT EXISTS
     for table, column, ddl in (("medicine", "aliases", "TEXT"),
                                ("search_request", "result_count", "INTEGER"),
-                               ("alert", "kind", "TEXT NOT NULL DEFAULT 'low'")):
+                               ("alert", "kind", "TEXT NOT NULL DEFAULT 'low'"),
+                               ("facility", "phone", "TEXT"),
+                               ("facility", "opening_hours", "TEXT"),
+                               ("facility", "osm_id", "TEXT"),
+                               ("user", "lang", "TEXT")):
         if column not in [r[1] for r in _info(conn, table)]:
             try:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
             except sqlite3.OperationalError as err:      # another worker got there first
                 if "duplicate column" not in str(err):
                     raise
+    # one OpenStreetMap place can only be imported once (empty osm_id values are allowed many times)
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_facility_osm ON facility(osm_id)")
     conn.commit()
 
 
 def rebuild_tables(conn):
     """Changes SQLite cannot make in place. Needs a connection opened with isolation_level=None.
     1. alert.medicine_id may be empty (a 'stale' reminder is about the facility, not a medicine).
-    2. user.role may be 'manager' (the admin page already offers it)."""
+    2. user.role may be 'manager' (the admin page already offers it) or 'user' (members of the public)."""
     conn.execute("PRAGMA foreign_keys = OFF")
     changed = []
 
@@ -59,18 +65,19 @@ def rebuild_tables(conn):
         changed.append("alert")
 
     user_sql = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'user'").fetchone()[0]
-    if "'manager'" not in user_sql:
+    if "'user'" not in user_sql:
         conn.execute("BEGIN")
         conn.execute("""CREATE TABLE user_new (
             user_id     INTEGER PRIMARY KEY AUTOINCREMENT,
             name        TEXT NOT NULL,
             phone       TEXT NOT NULL UNIQUE,
             pin_hash    TEXT NOT NULL,
-            role        TEXT NOT NULL CHECK (role IN ('staff','admin','manager')),
+            role        TEXT NOT NULL CHECK (role IN ('staff','admin','manager','user')),
             job_title   TEXT,
-            facility_id INTEGER REFERENCES facility(facility_id) ON DELETE CASCADE)""")
-        conn.execute("""INSERT INTO user_new(user_id, name, phone, pin_hash, role, job_title, facility_id)
-                        SELECT user_id, name, phone, pin_hash, role, job_title, facility_id FROM user""")
+            facility_id INTEGER REFERENCES facility(facility_id) ON DELETE CASCADE,
+            lang        TEXT)""")
+        conn.execute("""INSERT INTO user_new(user_id, name, phone, pin_hash, role, job_title, facility_id, lang)
+                        SELECT user_id, name, phone, pin_hash, role, job_title, facility_id, lang FROM user""")
         conn.execute("DROP TABLE user")
         conn.execute("ALTER TABLE user_new RENAME TO user")
         conn.execute("COMMIT")

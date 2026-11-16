@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ t.title }}</title>
+  <title>{% block title %}{{ t.title }}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -171,7 +171,73 @@
     .foot ul { list-style:none; margin:0; padding:0; display:grid; gap:8px; font-size:.95rem; }
     .foot a { text-decoration:none; }
     .foot a:hover { text-decoration:underline; }
+
+        /* ---------- site navigation, footer and shared pieces ---------- */
+    .top { position:relative; }
+    .mainnav { display:flex; align-items:center; gap:2px; flex:1; margin-left:10px; }
+    .mainnav a { text-decoration:none; font-weight:600; font-size:.95rem; padding:8px 12px; border-radius:99px; color:#ffffffd9; }
+    .mainnav a:hover { background:#ffffff1f; }
+    .mainnav a.on { background:#ffffff26; color:#fff; }
+    .mainnav .acct { margin-left:auto; display:flex; align-items:center; gap:8px; }
+    .navlink.solid { background:#fff; color:var(--deep); border-color:#fff; }
+    .navlink.solid:hover { background:#e8f0ee; }
+    .menu-btn { display:none; font:inherit; font-weight:600; font-size:.9rem; color:#fff; background:transparent; border:1.5px solid #ffffff66; border-radius:99px; padding:7px 14px; cursor:pointer; }
+    @media (max-width:820px) {
+      .menu-btn { display:inline-block; }
+      .lang { margin-left:auto; }
+      .mainnav { display:none; position:absolute; left:0; right:0; top:100%; margin:0; flex-direction:column; align-items:stretch; gap:4px;
+                 background:var(--deep); padding:10px 20px 18px; border-top:1px solid #ffffff26; z-index:20; box-shadow:0 14px 24px #0004; }
+      .mainnav.open { display:flex; }
+      .mainnav a { padding:11px 12px; }
+      .mainnav .acct { margin:8px 0 0; padding-top:12px; border-top:1px solid #ffffff26; flex-wrap:wrap; }
+    }
+
+    @media (min-width:720px) { .foot-in { grid-template-columns:1.5fr 1fr 1fr 1fr; } }
+    .foot-bottom { border-top:1px solid #ffffff26; }
+    .foot-bottom-in { max-width:1040px; margin:0 auto; padding:18px 20px 26px; display:grid; gap:10px; font-size:.85rem; color:#a9c7c0; }
+    .foot-bottom p { margin:0; max-width:80ch; }
+    .foot-bottom .row { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; }
+    .foot-bottom a { color:#cfe3de; }
+
+    .resbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 12px; }
+    .resbar .left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .resbar .count { margin:0; }
+    .newsearch { font-weight:700; font-size:.92rem; color:var(--teal); text-decoration:none; padding:7px 12px; border:1.5px solid #b8c6c1; border-radius:10px; background:#fff; white-space:nowrap; display:inline-block; }
+    .newsearch:hover { background:#e8f0ee; }
+    .viewtabs { display:inline-flex; background:#e8f0ee; border-radius:99px; padding:3px; }
+    .viewtabs button { font:inherit; font-size:.9rem; font-weight:600; border:0; background:transparent; color:var(--deep); padding:7px 18px; border-radius:99px; cursor:pointer; }
+    .viewtabs button[aria-selected="true"] { background:var(--deep); color:#fff; }
+    #map { height:min(62vh,460px); border-radius:var(--r); border:1px solid var(--line); background:#e8f0ee; }
+    #map-note { margin:8px 0 0; }
+    .pinwrap { background:none; border:0; }
+    .pin { display:block; width:22px; height:22px; border-radius:50%; border:3px solid #fff; box-shadow:0 1px 5px #0007; background:var(--c,#8b95a1); }
+    .pin.in_stock, .pin.listed { --c:var(--ok); } .pin.low { --c:#e09a14; } .pin.out { --c:var(--out); } .pin.unverified, .pin.unlisted { --c:#8b95a1; }
+    .pop strong { display:block; }
+    .pop a { font-weight:700; color:var(--teal); }
+    .res .acts { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:4px; }
+    .res .dir { display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:700; font-size:.9rem; color:var(--teal); padding:7px 12px; border-radius:10px; border:1.5px solid #b8c6c1; }
+    .res .dir:hover { background:#e8f0ee; }
+
+    .pg-h { font-size:clamp(1.7rem,4.5vw,2.2rem); margin:0 0 6px; }
+    .lead2 { color:var(--muted); margin:0 0 16px; max-width:60ch; }
+    .dirfilter { display:grid; gap:8px; grid-template-columns:1fr; }
+    @media (min-width:720px) { .dirfilter { grid-template-columns:2fr 1fr 1fr auto; } }
+    .pager { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:18px 0 0; }
+    .btn.off { opacity:.4; pointer-events:none; }
+    .back { font-weight:600; color:var(--teal); text-decoration:none; }
+    .facts { margin:12px 0 0; display:grid; gap:8px; }
+    .facts div { display:flex; gap:10px; flex-wrap:wrap; }
+    .facts dt { color:var(--muted); min-width:9em; }
+    .facts dd { margin:0; font-weight:600; }
+    .doc { max-width:70ch; }
+    .doc h1 { font-size:clamp(1.8rem,5vw,2.4rem); margin-bottom:10px; }
+    .doc section h2 { font-size:1.2rem; margin:26px 0 6px; }
+    .doc p { margin:0 0 10px; }
+    .qa { background:#fff; border:1px solid var(--line); border-radius:12px; margin:0 0 10px; padding:0 16px; }
+    .qa summary { cursor:pointer; font-weight:600; padding:14px 0; }
+    .qa p { margin:0 0 14px; color:var(--muted); }
   </style>
+
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -185,20 +251,31 @@
       </svg>
       <span class="nm">MedFinder<span class="rw" style="font-weight:600;opacity:.75"> Rwanda</span></span>
     </a>
-    <span class="spacer"></span>
+    <nav class="mainnav" id="site-nav" aria-label="{{ t.nav_menu }}">
+      <a href="{{ url_for('home') }}" {% if request.endpoint == 'home' and not request.args.get('q') %}class="on" aria-current="page"{% endif %}>{{ t.nav_home }}</a>
+      <a href="{{ url_for('home') }}#finder">{{ t.nav_find }}</a>
+      <a href="{{ url_for('facilities') }}" {% if request.endpoint in ('facilities', 'facility') %}class="on" aria-current="page"{% endif %}>{{ t.nav_pharmacies }}</a>
+      <a href="{{ url_for('home') }}#how-h">{{ t.nav_how }}</a>
+      <div class="acct">
+        {% if session.user_id %}
+          {% if session.role == 'staff' %}<a href="{{ url_for('dashboard') }}">{{ t.nav_dashboard }}</a>
+          {% elif session.role in ('admin', 'manager') %}<a href="{{ url_for('admin') }}">{{ t.nav_admin }}</a>{% endif %}
+          <a href="{{ url_for('settings') }}">{{ t.nav_settings }}</a>
+          <form class="inline" method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+            <button class="navlink">{{ t.logout }}</button>
+          </form>
+        {% else %}
+          <a class="navlink" href="{{ url_for('login') }}">{{ t.nav_login }}</a>
+          <a class="navlink solid" href="{{ url_for('signup') }}">{{ t.nav_signup }}</a>
+        {% endif %}
+      </div>
+    </nav>
     <nav class="lang" aria-label="EN / RW">
       <a href="{{ lang_url('en') }}" class="{{ 'on' if lang=='en' }}" hreflang="en" lang="en">EN</a>
       <a href="{{ lang_url('rw') }}" class="{{ 'on' if lang=='rw' }}" hreflang="rw" lang="rw">RW</a>
     </nav>
-    {% if session.user_id %}
-      <a class="who" href="{{ url_for('dashboard' if session.role=='staff' else 'admin') }}">{{ session.name }}</a>
-      <form class="inline" method="post" action="{{ url_for('logout') }}">
-        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-        <button class="navlink">{{ t.logout }}</button>
-      </form>
-    {% else %}
-      <a class="navlink" href="{{ url_for('login') }}">{{ t.nav_login }}</a>
-    {% endif %}
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">&#9776; {{ t.nav_menu }}</button>
   </div>
 </header>
 {% block hero %}{% endblock %}
@@ -211,23 +288,73 @@
     <div>
       <h2>MedFinder Rwanda</h2>
       <p>{{ t.footer_about }}</p>
+      {% if contact_ready %}
+      <p style="margin-top:10px">
+        {% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a><br>{% endif %}
+        {% if contact.phone %}<a href="tel:{{ contact.phone|replace(' ', '') }}">{{ contact.phone }}</a>{% endif %}
+      </p>
+      {% endif %}
     </div>
-    <nav aria-label="MedFinder">
-      <h2>{{ t.footer_links }}</h2>
+    <nav aria-label="{{ t.foot_explore }}">
+      <h2>{{ t.foot_explore }}</h2>
       <ul>
-        <li><a href="{{ url_for('home') }}">{{ t.search }}</a></li>
-        <li><a href="{{ url_for('login') }}">{{ t.footer_staff }}</a></li>
+        <li><a href="{{ url_for('home') }}">{{ t.nav_home }}</a></li>
+        <li><a href="{{ url_for('home') }}#finder">{{ t.nav_find }}</a></li>
+        <li><a href="{{ url_for('facilities') }}">{{ t.nav_pharmacies }}</a></li>
+        <li><a href="{{ url_for('home') }}#how-h">{{ t.nav_how }}</a></li>
       </ul>
     </nav>
-    <div>
-      <h2>{{ t.footer_lang }}</h2>
+    <nav aria-label="{{ t.foot_help }}">
+      <h2>{{ t.foot_help }}</h2>
       <ul>
-        <li><a href="{{ lang_url('en') }}" hreflang="en" lang="en">English</a></li>
-        <li><a href="{{ lang_url('rw') }}" hreflang="rw" lang="rw">Kinyarwanda</a></li>
+        <li><a href="{{ url_for('faq') }}">{{ t.link_faq }}</a></li>
+        <li><a href="{{ url_for('about') }}">{{ t.link_about }}</a></li>
+        {% if contact_ready %}<li><a href="{{ url_for('contact') }}">{{ t.link_contact }}</a></li>{% endif %}
+        <li><a href="{{ url_for('privacy') }}">{{ t.link_privacy }}</a></li>
+        <li><a href="{{ url_for('terms') }}">{{ t.link_terms }}</a></li>
       </ul>
+    </nav>
+    <nav aria-label="{{ t.foot_account }}">
+      <h2>{{ t.foot_account }}</h2>
+      <ul>
+        {% if session.user_id %}
+          {% if session.role == 'staff' %}<li><a href="{{ url_for('dashboard') }}">{{ t.nav_dashboard }}</a></li>
+          {% elif session.role in ('admin', 'manager') %}<li><a href="{{ url_for('admin') }}">{{ t.nav_admin }}</a></li>{% endif %}
+          <li><a href="{{ url_for('settings') }}">{{ t.nav_settings }}</a></li>
+        {% else %}
+          <li><a href="{{ url_for('login') }}">{{ t.nav_login }}</a></li>
+          <li><a href="{{ url_for('signup') }}">{{ t.nav_signup }}</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  <div class="foot-bottom">
+    <div class="foot-bottom-in">
+      <p>{{ t.foot_disclaimer }}</p>
+      <div class="row">
+        <span>&copy; {{ year }} {{ t.foot_rights }}</span>
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">{{ t.foot_osm }}</a>
+        <span>{{ t.footer_lang }}:
+          <a href="{{ lang_url('en') }}" hreflang="en" lang="en">English</a> /
+          <a href="{{ lang_url('rw') }}" hreflang="rw" lang="rw">Kinyarwanda</a></span>
+      </div>
     </div>
   </div>
-  <!-- TODO: add a real contact email or phone line here once you have one -->
 </footer>
+<script>
+(function () {
+  var b = document.getElementById('menu-btn'), n = document.getElementById('site-nav');
+  if (!b || !n) { return; }
+  b.addEventListener('click', function () {
+    var open = n.classList.toggle('open');
+    b.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && n.classList.contains('open')) {
+      n.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); b.focus();
+    }
+  });
+})();
+</script>
 </body>
 </html>

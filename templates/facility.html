@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ f.name }} - {{ t.title }}{% endblock %}
+{% block body %}
+<p><a class="back" href="{{ url_for('facilities') }}">&larr; {{ t.fac_back }}</a></p>
+
+<section class="panel">
+  <h1 class="pg-h">{{ f.name }}</h1>
+  <dl class="facts">
+    <div><dt>{{ t.type_label }}</dt><dd>{{ t['type_' ~ f.type] }}</dd></div>
+    <div><dt>{{ t.district }}</dt><dd>{% if f.sector %}{{ f.sector }}, {% endif %}{{ f.district }}</dd></div>
+    {% if f.phone %}<div><dt>{{ t.phone }}</dt><dd><a href="tel:{{ f.phone|replace(' ', '') }}">{{ f.phone }}</a></dd></div>{% endif %}
+    {% if f.opening_hours %}<div><dt>{{ t.dir_hours }}</dt><dd>{{ f.opening_hours }}</dd></div>{% endif %}
+  </dl>
+  <div class="acts" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+    {% if f.phone %}<a class="btn" style="text-decoration:none" href="tel:{{ f.phone|replace(' ', '') }}">{{ t.dir_call }}</a>{% endif %}
+    {% if f.lat is not none and f.lng is not none %}
+    <a class="btn ghost" style="text-decoration:none" href="https://www.google.com/maps/dir/?api=1&destination={{ f.lat }},{{ f.lng }}" target="_blank" rel="noopener">{{ t.directions }}</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="panel">
+  <h2>{{ t.fac_stock_h }}</h2>
+  {% if not stock %}
+    <p class="muted">{{ t.fac_no_stock }}</p>
+  {% else %}
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>{{ t.th_medicine }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr></thead>
+      <tbody>
+      {% for r in stock %}
+        <tr>
+          <td><a href="{{ url_for('home', q=r.name) }}">{{ r.name }}</a> {{ r.strength or '' }} {{ r.form or '' }}</td>
+          <td><span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'in_stock': '✓', 'low': '!', 'out': '×', 'unverified': '?'}[r.status] }}</i>{{ t[r.status] }}</span></td>
+          <td class="muted" title="{{ r.last_updated|kigali }}">{{ r.last_updated|ago }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:10px">{{ t.notice }}</p>
+  {% endif %}
+</section>
+
+{% if f.osm_id %}<p class="muted">{{ t.fac_osm_note }}</p>{% endif %}
+{% endblock %}

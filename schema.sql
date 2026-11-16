@@ -10,7 +10,10 @@ CREATE TABLE IF NOT EXISTS facility (
     sector      TEXT,
     lat         REAL,
     lng         REAL,
-    is_active   INTEGER NOT NULL DEFAULT 1
+    is_active   INTEGER NOT NULL DEFAULT 1,
+    phone       TEXT,
+    opening_hours TEXT,
+    osm_id      TEXT                       -- set for facilities imported from OpenStreetMap, e.g. node/12345
 );
 
 CREATE TABLE IF NOT EXISTS user (
@@ -18,9 +21,10 @@ CREATE TABLE IF NOT EXISTS user (
     name        TEXT NOT NULL,
     phone       TEXT NOT NULL UNIQUE,
     pin_hash    TEXT NOT NULL,
-    role        TEXT NOT NULL CHECK (role IN ('staff','admin','manager')),
+    role        TEXT NOT NULL CHECK (role IN ('staff','admin','manager','user')),   -- 'user' = a normal member of the public
     job_title   TEXT,
-    facility_id INTEGER REFERENCES facility(facility_id) ON DELETE CASCADE
+    facility_id INTEGER REFERENCES facility(facility_id) ON DELETE CASCADE,
+    lang        TEXT                       -- preferred language: en or rw
 );
 
 CREATE TABLE IF NOT EXISTS medicine (
@@ -89,7 +93,8 @@ CREATE TABLE IF NOT EXISTS feedback (
     FOREIGN KEY (medicine_id) REFERENCES medicine(medicine_id)
 );
 
--- failed staff logins, used to slow down PIN guessing. Successful logins clear the phone's rows.
+-- failed logins and recent sign-ups, used to slow down PIN guessing and mass account creation.
+-- A successful login clears that phone's rows.
 CREATE TABLE IF NOT EXISTS login_attempt (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     phone        TEXT NOT NULL,

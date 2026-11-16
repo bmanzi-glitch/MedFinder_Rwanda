@@ -173,12 +173,15 @@
   {% if not results %}
     <div class="empty">
       <h3>{{ t.empty_pre }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %} {{ t.empty_post }}</h3>
-      <p>{{ t.empty_hint }}</p>
+            <p><a class="newsearch" href="{{ url_for('home') }}">{{ t.new_search }}</a></p>
       {% if district %}<a class="btn" style="display:inline-block;text-decoration:none" href="{{ url_for('home', q=q) }}">{{ t.search_all }}</a>{% endif %}
     </div>
   {% else %}
     <div class="resbar">
-      <p class="count">{{ results|length }} {{ t.result_one if results|length == 1 else t.result_many }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %}</p>
+            <div class="left">
+        <p class="count">{{ results|length }} {{ t.result_one if results|length == 1 else t.result_many }} {{ q }}{% if district %} {{ t.in_word }} {{ district }}{% endif %}</p>
+        <a class="newsearch" href="{{ url_for('home') }}">{{ t.new_search }}</a>
+      </div>
       {% if map_points %}
       <div class="viewtabs" role="tablist">
         <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="list-wrap">{{ t.view_list }}</button>

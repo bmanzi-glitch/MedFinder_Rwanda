@@ -1,17 +1,21 @@
 """MedFinder Rwanda - Flask + SQLite, English + Kinyarwanda."""
 import math
 import os
+import re
 import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from urllib.parse import urlencode
 
-from flask import (Flask, Response, flash, g, jsonify, redirect, render_template,
+from flask import (Flask, Response, abort, flash, g, jsonify, redirect, render_template,
                    request, session, url_for)
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import migrate
+from pages import PAGES
+from strings import build_strings
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("MEDFINDER_DB", os.path.join(BASE, "medfinder.db"))
@@ -62,280 +66,21 @@ STALE_HOURS = 48               # SRS 5.5
 VALID_TYPES = ("pharmacy", "health_center", "hospital")
 SORTS = ("best", "recent", "distance")
 
+# Optional contact details shown in the footer and on /contact. Nothing is shown until you set them.
+CONTACT = {"email": os.environ.get("MEDFINDER_CONTACT_EMAIL", "").strip(),
+           "phone": os.environ.get("MEDFINDER_CONTACT_PHONE", "").strip(),
+           "address": os.environ.get("MEDFINDER_CONTACT_ADDRESS", "").strip()}
+RW_MOBILE = re.compile(r"^07[2389]\d{7}$")     # 072, 073, 078 or 079 followed by 7 digits
+SIGNUPS_PER_HOUR = 10                          # per network address
+PAGE_SIZE = 30                                 # facilities per page in the directory
+
 # Slowing down PIN guessing
 LOGIN_MAX_FAILS = 5            # failed tries per phone number ...
 LOGIN_IP_MAX_FAILS = 25        # ... and per network address ...
 LOGIN_WINDOW_MIN = 15          # ... within this many minutes
 DUMMY_HASH = generate_password_hash("not-a-real-pin")   # keeps timing the same for unknown phone numbers
 
-# ---------------------------------------------------------------------------
-# Translations. Every piece of text shown to users lives here, in both languages.
-# Have a native Kinyarwanda speaker review the "rw" block before the pilot.
-# ---------------------------------------------------------------------------
-STRINGS = {
-    "en": {
-        "title": "MedFinder Rwanda",
-        "login": "Staff login", "nav_login": "Staff login", "logout": "Log out",
-        "csrf_error": "Your session expired. Go back, refresh the page and try again.",
-        # home
-        "hero_title": "Find your medicine before you travel",
-        "hero_lead": "See which pharmacies and health centers have it in stock, so you don't make a trip for nothing.",
-        "search": "Search", "medicine": "Medicine", "medicine_ph": "Medicine, e.g. Paracetamol",
-        "district": "District", "district_all": "All districts",
-        "common": "Common searches",
-        "result_one": "result for", "result_many": "results for", "in_word": "in",
-        "empty_pre": "No facility has", "empty_post": "yet",
-        "empty_hint": "Check the spelling, or try a different district. Facilities update their stock every day.",
-        "search_all": "Search all districts",
-        "notice": "Availability may change. Please confirm with the facility.",
-        "updated": "Last updated",
-        "in_stock": "In stock", "low": "Low stock", "out": "Out of stock", "unverified": "Unverified",
-        "type_pharmacy": "Pharmacy", "type_health_center": "Health center", "type_hospital": "Hospital",
-        # login
-        "login_lead": "For pharmacy and health center staff. Log in to update your stock.",
-        "phone": "Phone number", "pin": "PIN", "login_btn": "Log in",
-        "bad_login": "Invalid phone number or PIN.",
-        # staff dashboard
-        "dash_lead": "Update your stock every day so patients see what is really available.",
-        "stat_tracked": "Medicines tracked", "stat_low": "Running low", "stat_out": "Out of stock",
-        "update_h": "Update stock", "qty": "Quantity in stock", "qty_ph": "0 means out of stock",
-        "save": "Save stock", "current_h": "Current stock",
-        "th_medicine": "Medicine", "th_qty": "Quantity", "th_status": "Status", "th_alert": "Alert below",
-        "not_set": "Not set",
-        "empty_stock": "No stock saved yet. Pick a medicine above and enter how many you have.",
-        "stock_saved": "Stock updated.", "neg_qty": "Quantity cannot be negative.",
-        "bad_input": "Choose a medicine and enter a whole number.",
-        "thr_h": "Low-stock alert", "thr_lead": "You get an SMS when stock falls below this number.",
-        "thr_label": "Alert when below", "thr_save": "Save alert level", "thr_saved": "Alert level saved.",
-        "alert_msg": "Low stock: {name} ({qty} left)",
-        "reminder_msg": "MedFinder: please update your stock today.",
-        # admin navigation + overview
-        "nav_overview": "Overview", "nav_facilities": "Facilities", "nav_medicines": "Medicines",
-        "admin_h": "Admin overview", "stat_facilities": "Active facilities",
-        "stat_low_now": "Low or out of stock now",
-        "stat_stale": f"Facilities with stock older than {REMINDER_HOURS} h",
-        "filter": "Filter",
-        "low_monitor_h": "Low and out of stock now", "th_facility": "Facility",
-        "no_low": "Nothing is low or out of stock.",
-        "stale_h": f"Facilities with stock not updated in {REMINDER_HOURS} hours", "never": "Never updated",
-        "no_stale": f"All stock was updated in the last {REMINDER_HOURS} hours.", "th_last": "Oldest update",
-        "top_out_h": "Medicines most often out of stock",
-        "facility_one": "facility", "facility_many": "facilities",
-        "searches_h": "What people search for",
-        "no_out": "No stock-outs recorded.", "no_searches": "No searches yet. Try the home page.",
-        # admin facilities
-        "fac_add_h": "Register a facility", "f_name": "Facility name", "f_type": "Type",
-        "f_sector": "Sector", "f_lat": "Latitude (optional)", "f_lng": "Longitude (optional)",
-        "staff_first_h": "First staff account (optional)", "s_name": "Staff name", "s_title": "Job title",
-        "s_pin": "PIN (4 to 6 digits)", "add_facility": "Register facility",
-        "fac_added": "Facility registered.", "fac_need": "Enter the facility name, district and a valid type.",
-        "fac_list_h": "All facilities", "th_name": "Name", "th_type": "Type", "th_district": "District",
-        "th_staff": "Staff", "th_action": "Action", "active": "Active", "inactive": "Inactive",
-        "toggle_off": "Deactivate", "toggle_on": "Activate", "fac_toggled": "Facility updated.",
-        "staff_add_h": "Add an account", "add_staff": "Add staff", "staff_added": "Account created.",
-        "staff_invalid": "Enter a name, a phone number and a PIN of 4 to 6 digits.",
-        "phone_taken": "That phone number already has an account.",
-        # admin medicines
-        "med_add_h": "Add a medicine", "m_name": "Medicine name",
-        "m_strength": "Strength, e.g. 500mg", "m_form": "Form, e.g. tablet",
-        "add_medicine": "Add medicine", "med_added": "Medicine added.", "med_saved": "Medicine updated.",
-        "med_need": "Enter the medicine name.", "med_exists": "This medicine, strength and form already exist.",
-        "med_list_h": "Medicine catalog", "save_short": "Save",
-        # patient feedback + reports
-        "fb_ask": "Did you go here?", "fb_yes": "Yes, it was there", "fb_no": "No, it was not",
-        "fb_thanks": "Thank you. Your answer helps keep stock information accurate.",
-        "reports_h": "Reports", "role_label": "Role", "role_staff": "Facility staff", "role_manager": "Manager",
-        "mgr_note": "Managers see reports only and need no facility.",
-        "acc_h": "Do patients find the medicine?", "stat_accuracy": "Search accuracy (target 80%)",
-        "stat_wasted": "Wasted trips reported", "stat_responses": "Patient answers",
-        "no_feedback": "No patient answers yet.", "th_answers": "Answers", "th_found": "Found it",
-        "th_accuracy": "Accuracy", "unmet_h": "Searches with no result",
-        "no_unmet": "Every search found a facility.", "th_query": "Search", "th_times": "Times",
-        # relative time
-        "just_now": "just now", "min_ago": "{n} min ago", "h_ago": "{n} h ago",
-        "day_ago": "{n} day ago", "days_ago": "{n} days ago",
-        # SMS / USSD
-        "ussd_med": "Enter medicine name:", "ussd_district": "Enter district (e.g. Gasabo):",
-        "sms_not_found": "Not found nearby. Try another district.",
-        "sms_help": "Send: medicine district (e.g. paracetamol Gasabo)",
-        "sms_in": "In stock", "sms_low": "Low", "sms_out": "Out", "sms_unv": "Unverified",
-    },
-    "rw": {
-        "title": "MedFinder Rwanda",
-        "login": "Kwinjira (abakozi)", "nav_login": "Kwinjira", "logout": "Sohoka",
-        "csrf_error": "Igihe cyawe cyarangiye. Subira inyuma, ushyire urupapuro ku murongo wongere ugerageze.",
-        "hero_title": "Menya aho umuti uboneka mbere yo gukora urugendo",
-        "hero_lead": "Reba farumasi n'ibigo nderabuzima bifite umuti ushaka, kugira ngo utazapfusha ubusa urugendo.",
-        "search": "Shakisha", "medicine": "Umuti", "medicine_ph": "Umuti, urugero: Paracetamol",
-        "district": "Akarere", "district_all": "Uturere twose",
-        "common": "Ibikunze gushakishwa",
-        "result_one": "cyabonetse kuri", "result_many": "byabonetse kuri", "in_word": "i",
-        "empty_pre": "Nta kigo gifite", "empty_post": "kugeza ubu",
-        "empty_hint": "Reba uko wanditse, cyangwa ugerageze akandi karere. Ibigo bivugurura ububiko buri munsi.",
-        "search_all": "Shakisha mu turere twose",
-        "notice": "Ububiko bushobora guhinduka. Banza ubaze ikigo.",
-        "updated": "Ivugurura rya nyuma",
-        "in_stock": "Urahari", "low": "Ni muke", "out": "Washize", "unverified": "Ntibyemejwe",
-        "type_pharmacy": "Farumasi", "type_health_center": "Ikigo nderabuzima", "type_hospital": "Ibitaro",
-        "login_lead": "Ku bakozi ba farumasi n'ibigo nderabuzima. Injira kugira ngo uvugurure ububiko.",
-        "phone": "Nimero ya telefone", "pin": "PIN (umubare w'ibanga)", "login_btn": "Injira",
-        "bad_login": "Nimero ya telefone cyangwa PIN si byo.",
-        "dash_lead": "Vugurura ububiko buri munsi kugira ngo abarwayi babone ibiboneka by'ukuri.",
-        "stat_tracked": "Imiti ikurikiranwa", "stat_low": "Iri gushira", "stat_out": "Yashize",
-        "update_h": "Vugurura ububiko", "qty": "Ingano mu bubiko", "qty_ph": "0 bisobanura ko yashize",
-        "save": "Bika", "current_h": "Ububiko buriho",
-        "th_medicine": "Umuti", "th_qty": "Ingano", "th_status": "Uko bimeze", "th_alert": "Integuza munsi ya",
-        "not_set": "Ntirwashyizweho",
-        "empty_stock": "Nta bubiko bubitswe. Hitamo umuti hejuru wandike ingano ufite.",
-        "stock_saved": "Ububiko bwavuguruwe.", "neg_qty": "Ingano ntishobora kuba munsi ya zeru.",
-        "bad_input": "Hitamo umuti wandike umubare wuzuye.",
-        "thr_h": "Integuza y'ububiko bucye",
-        "thr_lead": "Uzohererezwa SMS ububiko nibujya munsi y'uyu mubare.",
-        "thr_label": "Mbimenyeshe iyo biri munsi ya", "thr_save": "Bika urugero rw'integuza",
-        "thr_saved": "Urugero rw'integuza rwabitswe.",
-        "alert_msg": "Umuti {name} uri gushira: hasigaye {qty}",
-        "reminder_msg": "MedFinder: vugurura ububiko bwawe uyu munsi.",
-        "nav_overview": "Incamake", "nav_facilities": "Ibigo", "nav_medicines": "Imiti",
-        "admin_h": "Incamake y'ubuyobozi", "stat_facilities": "Ibigo bikora",
-        "stat_low_now": "Imiti iri gushira cyangwa yashize ubu",
-        "stat_stale": f"Ibigo bifite ububiko burengeje amasaha {REMINDER_HOURS}",
-        "filter": "Shungura",
-        "low_monitor_h": "Imiti iri gushira cyangwa yashize ubu", "th_facility": "Ikigo",
-        "no_low": "Nta muti uri gushira cyangwa washize.",
-        "stale_h": f"Ibigo bifite ububiko butavuguruwe mu masaha {REMINDER_HOURS}", "never": "Ntibigeze bivugurura",
-        "no_stale": f"Ububiko bwose bwavuguruwe mu masaha {REMINDER_HOURS} ashize.", "th_last": "Ivugurura rya kera cyane",
-        "top_out_h": "Imiti ikunze gushira mu bubiko",
-        "facility_one": "ikigo", "facility_many": "ibigo",
-        "searches_h": "Ibyo abantu bashakisha",
-        "no_out": "Nta muti n'umwe washize.", "no_searches": "Nta wari washakisha. Gerageza ku rupapuro rw'itangiriro.",
-        "fac_add_h": "Andikisha ikigo", "f_name": "Izina ry'ikigo", "f_type": "Ubwoko",
-        "f_sector": "Umurenge", "f_lat": "Latitude (si ngombwa)", "f_lng": "Longitude (si ngombwa)",
-        "staff_first_h": "Konti y'umukozi wa mbere (si ngombwa)", "s_name": "Izina ry'umukozi",
-        "s_title": "Umwanya", "s_pin": "PIN (imibare 4 kugeza kuri 6)", "add_facility": "Andikisha ikigo",
-        "fac_added": "Ikigo cyanditswe.", "fac_need": "Andika izina, akarere n'ubwoko nyabwo bw'ikigo.",
-        "fac_list_h": "Ibigo byose", "th_name": "Izina", "th_type": "Ubwoko", "th_district": "Akarere",
-        "th_staff": "Abakozi", "th_action": "Igikorwa", "active": "Gikora", "inactive": "Ntigikora",
-        "toggle_off": "Hagarika", "toggle_on": "Subiza mu mirimo", "fac_toggled": "Ikigo cyavuguruwe.",
-        "staff_add_h": "Ongeramo konti", "add_staff": "Ongeramo umukozi",
-        "staff_added": "Konti yaremwe.",
-        "staff_invalid": "Andika izina, nimero ya telefone na PIN y'imibare 4 kugeza kuri 6.",
-        "phone_taken": "Iyi nimero ya telefone isanzwe ifite konti.",
-        "med_add_h": "Ongeramo umuti", "m_name": "Izina ry'umuti",
-        "m_strength": "Ingano, urugero: 500mg", "m_form": "Ubwoko, urugero: tablet",
-        "add_medicine": "Ongeramo umuti", "med_added": "Umuti wongeweho.", "med_saved": "Umuti wavuguruwe.",
-        "med_need": "Andika izina ry'umuti.", "med_exists": "Uyu muti, ingano n'ubwoko byarahari.",
-        "med_list_h": "Urutonde rw'imiti", "save_short": "Bika",
-        "fb_ask": "Warugeze aha?", "fb_yes": "Yego, nawubonye", "fb_no": "Oya, ntawo nabonye",
-        "fb_thanks": "Murakoze. Igisubizo cyawe gifasha kugira amakuru y'ububiko nyayo.",
-        "reports_h": "Raporo", "role_label": "Uruhare", "role_staff": "Umukozi w'ikigo", "role_manager": "Umuyobozi",
-        "mgr_note": "Abayobozi babona raporo gusa kandi ntibakeneye ikigo.",
-        "acc_h": "Abarwayi barawubona?", "stat_accuracy": "Ukuri kw'ibisubizo (intego 80%)",
-        "stat_wasted": "Ingendo zapfuye zatanzwe", "stat_responses": "Ibisubizo by'abarwayi",
-        "no_feedback": "Nta gisubizo cy'umurwayi kiraboneka.", "th_answers": "Ibisubizo", "th_found": "Barawubonye",
-        "th_accuracy": "Ukuri", "unmet_h": "Ishakisha ritabonye ibisubizo",
-        "no_unmet": "Buri shakisha ryabonye ikigo.", "th_query": "Ishakisha", "th_times": "Inshuro",
-        "just_now": "ubu nyine", "min_ago": "iminota {n} ishize", "h_ago": "amasaha {n} ashize",
-        "day_ago": "umunsi {n} ushize", "days_ago": "iminsi {n} ishize",
-        "ussd_med": "Andika izina ry'umuti:", "ussd_district": "Andika akarere (urugero: Gasabo):",
-        "sms_not_found": "Nta kibonetse. Gerageza akandi karere.",
-        "sms_help": "Ohereza: umuti akarere (urugero: paracetamol Gasabo)",
-        "sms_in": "Urahari", "sms_low": "Ni muke", "sms_out": "Washize", "sms_unv": "Ntibyemejwe",
-    },
-}
-
-# ---------------------------------------------------------------------------
-# Text for the homepage, search filters, map and footer.
-# Have a native Kinyarwanda speaker review the "rw" lines before the pilot.
-# ---------------------------------------------------------------------------
-HOME_STRINGS = {
-    "en": {
-        "skip_link": "Skip to main content",
-        "trust_chip": "Stock is entered by the facility's own staff",
-        "panel_h": "Right now",
-        "panel_facilities": "Facilities with stock listed",
-        "panel_medicines": "Medicines listed",
-        "panel_fresh": "Facilities updated in the last {h} hours",
-        "panel_last": "Latest stock update",
-        "how_h": "How it works",
-        "how1_h": "Search for a medicine",
-        "how1_p": "Type the name, for example Paracetamol. Pick your district to narrow the list.",
-        "how2_h": "Check the status",
-        "how2_p": "Each facility shows if the medicine is in stock, low or out, and when staff last updated it.",
-        "how3_h": "Call, then go",
-        "how3_p": "Confirm with the facility before you travel. Tell us if the medicine was there so the information stays honest.",
-        "browse_h": "Browse by need",
-        "cat_pain": "Pain and fever", "cat_infection": "Infections", "cat_malaria": "Malaria",
-        "cat_maternal": "Pregnancy and childbirth", "cat_diabetes": "Diabetes",
-        "trust_h": "What each status means",
-        "in_stock_d": "Staff confirmed this stock in the last {h} hours.",
-        "low_d": "Stock is running low and may run out soon.",
-        "out_d": "Staff reported that none is left.",
-        "unv_d": "Not updated in {h} hours. Call before you go.",
-        "trust_p": "In stock does not guarantee there is enough for every patient. Always confirm with the facility.",
-        "call_first": "Not updated recently. Call before you go.",
-        "directions": "Directions",
-        "footer_about": "MedFinder Rwanda helps people check if a medicine is available at pharmacies, health centers and hospitals before they travel.",
-        "footer_links": "Explore", "footer_staff": "Staff login", "footer_lang": "Language",
-        # search filters, distance, map
-        "filter_type_all": "All facility types", "sort_label": "Sort by",
-        "sort_best": "Best match", "sort_recent": "Recently updated", "sort_distance": "Nearest first",
-        "near_me": "Use my location",
-        "geo_wait": "Finding your location...",
-        "geo_fail": "We could not get your location. Allow location access in your browser and try again.",
-        "km_away": "{d} km away",
-        "view_list": "List", "view_map": "Map",
-        "map_loading": "Loading the map...",
-        "map_missing": "{n} facilities have no map location yet.",
-        "map_fail": "The map could not load. Check your internet connection. The list still works.",
-        "map_you": "You are here",
-        "m_aliases": "Other names, e.g. Panadol", "th_aliases": "Other names",
-        "too_many": "Too many failed attempts. Try again in {m} minutes.",
-    },
-    "rw": {
-        "skip_link": "Simbukira ku rupapuro nyamukuru",
-        "trust_chip": "Ububiko bwinjizwa n'abakozi b'ikigo ubwabo",
-        "panel_h": "Ubu",
-        "panel_facilities": "Ibigo bifite ububiko bwanditse",
-        "panel_medicines": "Imiti yanditswe",
-        "panel_fresh": "Ibigo byavuguruwe mu masaha {h} ashize",
-        "panel_last": "Ivugurura rya nyuma ry'ububiko",
-        "how_h": "Uko bikora",
-        "how1_h": "Shakisha umuti",
-        "how1_p": "Andika izina ry'umuti, urugero Paracetamol. Hitamo akarere kugira ngo ugabanye urutonde.",
-        "how2_h": "Reba uko bimeze",
-        "how2_p": "Buri kigo kigaragaza niba umuti uhari, ari muke cyangwa washize, n'igihe abakozi bawuvugururiye bwa nyuma.",
-        "how3_h": "Hamagara, hanyuma ujyeyo",
-        "how3_p": "Banza ubaze ikigo mbere yo gukora urugendo. Tubwire niba umuti wari uhari kugira ngo amakuru agume kuba ukuri.",
-        "browse_h": "Shakisha ukurikije icyo ukeneye",
-        "cat_pain": "Ububabare n'umuriro", "cat_infection": "Indwara z'ubwandu", "cat_malaria": "Malariya",
-        "cat_maternal": "Inda no kubyara", "cat_diabetes": "Diyabete",
-        "trust_h": "Icyo buri miterere isobanura",
-        "in_stock_d": "Abakozi bemeje ububiko mu masaha {h} ashize.",
-        "low_d": "Ububiko buri gushira kandi bushobora gushira vuba.",
-        "out_d": "Abakozi bavuze ko nta musigaye.",
-        "unv_d": "Ntibyavuguruwe mu masaha {h}. Hamagara mbere yo kugenda.",
-        "trust_p": "Urahari ntibivuze ko hari uhagije ku barwayi bose. Buri gihe banza ubaze ikigo.",
-        "call_first": "Ntibyavuguruwe vuba. Hamagara mbere yo kugenda.",
-        "directions": "Inzira",
-        "footer_about": "MedFinder Rwanda ifasha abantu kureba niba umuti uboneka muri farumasi, ibigo nderabuzima n'ibitaro mbere yo gukora urugendo.",
-        "footer_links": "Urubuga", "footer_staff": "Kwinjira (abakozi)", "footer_lang": "Ururimi",
-        "filter_type_all": "Ubwoko bwose bw'ibigo", "sort_label": "Tondekanya ukurikije",
-        "sort_best": "Ibikwiriye cyane", "sort_recent": "Ibyavuguruwe vuba", "sort_distance": "Ibiri hafi mbere",
-        "near_me": "Koresha aho ndi",
-        "geo_wait": "Turashaka aho uri...",
-        "geo_fail": "Ntitwabashije kumenya aho uri. Emerera urubuga kumenya aho uri maze ugerageze.",
-        "km_away": "{d} km uvuye aho uri",
-        "view_list": "Urutonde", "view_map": "Ikarita",
-        "map_loading": "Turimo gufungura ikarita...",
-        "map_missing": "Ibigo {n} nta hantu biri ku ikarita kugeza ubu.",
-        "map_fail": "Ikarita ntiyabashije gufungura. Reba internet yawe. Urutonde rwo rurakora.",
-        "map_you": "Uri hano",
-        "m_aliases": "Andi mazina, urugero Panadol", "th_aliases": "Andi mazina",
-        "too_many": "Wagerageje inshuro nyinshi nabi. Ongera ugerageze nyuma y'iminota {m}.",
-    },
-}
-for _lang, _extra in HOME_STRINGS.items():
-    STRINGS[_lang].update(_extra)
+STRINGS = build_strings(REMINDER_HOURS)      # all text shown to users lives in strings.py
 
 DEFAULT_LANG = "en"
 
@@ -428,9 +173,11 @@ def inject_globals():
         """Current page URL with the language swapped, so a search is kept."""
         args = request.args.to_dict()
         args["lang"] = code
-        return url_for(request.endpoint, **args)
+        return request.path + "?" + urlencode(args)       # works for every page, including /facility/3 and 404
     return {"t": STRINGS[current_lang()], "lang": current_lang(),
-            "lang_url": lang_url, "csrf_token": csrf_token}
+            "lang_url": lang_url, "csrf_token": csrf_token,
+            "contact": CONTACT, "contact_ready": any(CONTACT.values()),
+            "year": datetime.now(timezone.utc).year}
 
 
 def now_iso():
@@ -625,9 +372,19 @@ def login_required(role=None):
     return deco
 
 
+def normalize_phone(raw):
+    """'+250 788 123 456', '250788123456' and '0788 123 456' all become '0788123456'."""
+    p = re.sub(r"[\s\-().]", "", raw or "")
+    if p.startswith("+250"):
+        p = "0" + p[4:]
+    elif p.startswith("250") and len(p) == 12:
+        p = "0" + p[3:]
+    return p
+
+
 def create_staff(c, name, phone, pin, facility_id, job_title="", role="staff"):
     """Insert a staff or manager account. Returns None on success, or a STRINGS key naming the problem."""
-    name, phone, job_title = name.strip(), phone.strip().replace(" ", ""), job_title.strip()
+    name, phone, job_title = name.strip(), normalize_phone(phone), job_title.strip()
     if not name or not phone or not (pin.isdigit() and 4 <= len(pin) <= 6):
         return "staff_invalid"
     if c.execute("SELECT 1 FROM user WHERE phone=?", (phone,)).fetchone():
@@ -721,10 +478,30 @@ def suggest():
     return jsonify(out)
 
 
+def record_failure(c, phone, ip):
+    c.execute("INSERT INTO login_attempt(phone, ip, attempted_at) VALUES (?,?,?)", (phone[:40], ip, now_iso()))
+    c.execute("DELETE FROM login_attempt WHERE attempted_at < ?",
+              ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds"),))
+    c.commit()
+
+
+def start_session(user):
+    """Sign a user in with a fresh session, in their saved language."""
+    lang = user["lang"] if user["lang"] in STRINGS else current_lang()
+    session.clear()
+    session.update(lang=lang, user_id=user["user_id"], role=user["role"],
+                   facility_id=user["facility_id"], name=user["name"])
+    session.permanent = True                     # expires after 12 hours
+
+
+def home_for(role):
+    return url_for({"staff": "dashboard", "admin": "admin", "manager": "admin"}.get(role, "home"))
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        phone = request.form.get("phone", "").strip().replace(" ", "")
+        phone = normalize_phone(request.form.get("phone", ""))
         pin = request.form.get("pin", "")
         ip = request.remote_addr or "unknown"
         c = db()
@@ -740,18 +517,108 @@ def login():
         if ok:
             c.execute("DELETE FROM login_attempt WHERE phone=?", (phone,))
             c.commit()
-            lang = current_lang()
-            session.clear()                              # fresh session on login
-            session.update(lang=lang, user_id=user["user_id"], role=user["role"],
-                           facility_id=user["facility_id"], name=user["name"])
-            session.permanent = True                     # expires after 12 hours
-            return redirect(url_for("dashboard" if user["role"] == "staff" else "admin"))
-        c.execute("INSERT INTO login_attempt(phone, ip, attempted_at) VALUES (?,?,?)", (phone[:40], ip, now_iso()))
-        c.execute("DELETE FROM login_attempt WHERE attempted_at < ?",
-                  ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds"),))
-        c.commit()
+            start_session(user)
+            return redirect(home_for(user["role"]))
+        record_failure(c, phone, ip)
         flash(tr("bad_login"))
     return render_template("login.html")
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    """Anyone can create a free member account. Staff and admin accounts are made by an administrator."""
+    if "user_id" in session:
+        return redirect(url_for("home"))
+    form = {"name": "", "phone": ""}
+    if request.method == "POST":
+        c = db()
+        ip = request.remote_addr or "unknown"
+        name = request.form.get("name", "").strip()[:60]
+        raw_phone = request.form.get("phone", "")
+        phone = normalize_phone(raw_phone)
+        pin, pin2 = request.form.get("pin", ""), request.form.get("pin2", "")
+        form = {"name": name, "phone": raw_phone[:20]}
+        hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(timespec="seconds")
+        recent = c.execute("SELECT COUNT(*) FROM login_attempt WHERE phone='signup' AND ip=? AND attempted_at>?",
+                           (ip, hour_ago)).fetchone()[0]
+        error = None
+        if recent >= SIGNUPS_PER_HOUR:
+            error = "signup_limit"
+        elif not name:
+            error = "signup_need_name"
+        elif not RW_MOBILE.match(phone):
+            error = "signup_bad_phone"
+        elif not (pin.isdigit() and 4 <= len(pin) <= 6):
+            error = "pin_rule"
+        elif pin != pin2:
+            error = "pin_mismatch"
+        elif not request.form.get("agree"):
+            error = "agree_needed"
+        elif c.execute("SELECT 1 FROM user WHERE phone=?", (phone,)).fetchone():
+            error = "phone_taken"
+        if error:
+            flash(tr(error))
+            return render_template("signup.html", form=form)
+        c.execute("INSERT INTO user(name,phone,pin_hash,role,lang) VALUES (?,?,?,?,?)",
+                  (name, phone, generate_password_hash(pin), "user", current_lang()))
+        c.execute("INSERT INTO login_attempt(phone, ip, attempted_at) VALUES ('signup',?,?)", (ip, now_iso()))
+        c.commit()
+        start_session(c.execute("SELECT * FROM user WHERE phone=?", (phone,)).fetchone())
+        flash(tr("welcome").format(name=name))
+        return redirect(url_for("home"))
+    return render_template("signup.html", form=form)
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required()
+def settings():
+    """Everyone who is signed in can change their name, language and PIN. Members can also delete their account."""
+    c = db()
+    ip = request.remote_addr or "unknown"
+    user = c.execute("SELECT * FROM user WHERE user_id=?", (session["user_id"],)).fetchone()
+    if user is None:                                 # account was removed
+        session.clear()
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "profile":
+            name = request.form.get("name", "").strip()[:60]
+            lang = request.form.get("lang")
+            if not name:
+                flash(tr("signup_need_name"))
+            else:
+                lang = lang if lang in STRINGS else current_lang()
+                c.execute("UPDATE user SET name=?, lang=? WHERE user_id=?", (name, lang, user["user_id"]))
+                c.commit()
+                session["name"], session["lang"] = name, lang
+                flash(STRINGS[lang]["set_saved"])
+        elif action in ("pin", "delete"):
+            if login_locked(c, user["phone"], ip):
+                flash(tr("too_many").format(m=LOGIN_WINDOW_MIN))
+            elif not check_password_hash(user["pin_hash"], request.form.get("current", "")):
+                record_failure(c, user["phone"], ip)
+                flash(tr("pin_wrong"))
+            elif action == "pin":
+                new, new2 = request.form.get("new", ""), request.form.get("new2", "")
+                if not (new.isdigit() and 4 <= len(new) <= 6):
+                    flash(tr("pin_rule"))
+                elif new != new2:
+                    flash(tr("pin_mismatch"))
+                else:
+                    c.execute("UPDATE user SET pin_hash=? WHERE user_id=?", (generate_password_hash(new), user["user_id"]))
+                    c.execute("DELETE FROM login_attempt WHERE phone=?", (user["phone"],))
+                    c.commit()
+                    flash(tr("pin_changed"))
+            elif user["role"] == "user":             # only members can delete themselves here
+                c.execute("DELETE FROM user WHERE user_id=?", (user["user_id"],))
+                c.commit()
+                lang = current_lang()
+                session.clear()
+                session["lang"] = lang
+                flash(tr("set_deleted"))
+                return redirect(url_for("home"))
+        return redirect(url_for("settings"))
+    return render_template("settings.html", user=user, languages=sorted(STRINGS))
 
 
 @app.route("/logout", methods=["POST"])
@@ -794,6 +661,117 @@ def feedback():
         session["fb"] = answered + [key]
     flash(tr("fb_thanks"))
     return redirect(nxt)
+
+
+# ---------- facility directory ----------
+def facility_filters():
+    q = request.args.get("q", "").strip()[:60]
+    district = request.args.get("district", "").strip()
+    ftype = request.args.get("type", "")
+    return q, district, (ftype if ftype in VALID_TYPES else "")
+
+
+def facility_rows(q, district, ftype, limit=None):
+    """Active facilities with how many medicines each reports. Facilities that report stock come first."""
+    sql = """SELECT f.*,
+                    (SELECT COUNT(*) FROM stock_record s WHERE s.facility_id = f.facility_id) AS n_stock,
+                    (SELECT MAX(last_updated) FROM stock_record s WHERE s.facility_id = f.facility_id) AS latest
+             FROM facility f WHERE f.is_active = 1"""
+    args = []
+    if q:
+        sql += " AND f.name LIKE ? ESCAPE '\\'"
+        args.append(like_pattern(q))
+    if district:
+        sql += " AND f.district = ?"
+        args.append(district)
+    if ftype:
+        sql += " AND f.type = ?"
+        args.append(ftype)
+    sql += " ORDER BY (n_stock > 0) DESC, f.name"
+    if limit:
+        sql += f" LIMIT {int(limit)}"
+    return db().execute(sql, args).fetchall()
+
+
+@app.route("/facilities")
+def facilities():
+    q, district, ftype = facility_filters()
+    rows = facility_rows(q, district, ftype)
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+    pages = max(1, -(-len(rows) // PAGE_SIZE))
+    page = min(page, pages)
+    S = STRINGS[current_lang()]
+    points = [{"lat": r["lat"], "lng": r["lng"], "name": r["name"],
+               "status": "listed" if r["n_stock"] else "unlisted",
+               "label": S["dir_reports"] if r["n_stock"] else S["dir_no_reports"],
+               "med": f"{S['type_' + r['type']]}, {r['district']}",
+               "url": url_for("facility", fid=r["facility_id"])}
+              for r in rows if r["lat"] is not None and r["lng"] is not None][:500]
+    districts = [r[0] for r in db().execute("SELECT DISTINCT district FROM facility WHERE is_active=1 ORDER BY 1")]
+    return render_template("facilities.html", rows=rows[(page - 1) * PAGE_SIZE: page * PAGE_SIZE], total=len(rows),
+                           page=page, pages=pages, q=q, district=district, ftype=ftype, districts=districts,
+                           valid_types=VALID_TYPES, map_points=points,
+                           qs={k: v for k, v in (("q", q), ("district", district), ("type", ftype)) if v},
+                           map_missing=len(rows) - len(points) if len(rows) > len(points) else 0)
+
+
+@app.route("/facility/<int:fid>")
+def facility(fid):
+    f = db().execute("SELECT * FROM facility WHERE facility_id=? AND is_active=1", (fid,)).fetchone()
+    if f is None:
+        abort(404)
+    stock = db().execute("""SELECT m.name, m.strength, m.form, s.quantity, s.last_updated, t.min_quantity
+                            FROM stock_record s JOIN medicine m USING (medicine_id)
+                            LEFT JOIN alert_threshold t
+                              ON t.facility_id = s.facility_id AND t.medicine_id = s.medicine_id
+                            WHERE s.facility_id = ? ORDER BY m.name""", (fid,)).fetchall()
+    rows = [dict(r, status=compute_status(r["quantity"], r["last_updated"], r["min_quantity"])) for r in stock]
+    return render_template("facility.html", f=f, stock=rows)
+
+
+@app.route("/api/facilities")
+def api_facilities():
+    """Public, read-only list of facilities (name, type, place, coordinates, phone). Optional ?q= ?district= ?type="""
+    q, district, ftype = facility_filters()
+    rows = facility_rows(q, district, ftype, limit=500)
+    return jsonify({
+        "attribution": "Facility data: MedFinder Rwanda and OpenStreetMap contributors (ODbL)",
+        "count": len(rows),
+        "facilities": [{"id": r["facility_id"], "name": r["name"], "type": r["type"], "district": r["district"],
+                        "sector": r["sector"], "lat": r["lat"], "lng": r["lng"], "phone": r["phone"],
+                        "opening_hours": r["opening_hours"], "reports_stock": bool(r["n_stock"])} for r in rows]})
+
+
+# ---------- information pages ----------
+def make_info_view(slug):
+    def view():
+        return render_template("info.html", page=PAGES[slug][current_lang()], slug=slug)
+    view.__name__ = f"info_{slug}"
+    return view
+
+
+for _slug in PAGES:                                 # /about /faq /privacy /terms
+    app.add_url_rule(f"/{_slug}", endpoint=_slug, view_func=make_info_view(_slug))
+
+
+@app.route("/contact")
+def contact():
+    if not any(CONTACT.values()):                   # nothing configured, so there is nothing to show
+        abort(404)
+    return render_template("contact.html")
+
+
+@app.errorhandler(404)
+def not_found(_e):
+    return render_template("error.html", code=404), 404
+
+
+@app.errorhandler(500)
+def server_error(_e):
+    return render_template("error.html", code=500), 500
 
 
 # ---------- staff ----------

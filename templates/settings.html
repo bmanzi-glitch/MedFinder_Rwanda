@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ t.settings_h }} - {{ t.title }}{% endblock %}
+{% block body %}
+<h1 class="pg-h">{{ t.settings_h }}</h1>
+
+<section class="panel">
+  <h2>{{ t.set_details }}</h2>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="profile">
+    <div class="fgrid">
+      <div>
+        <label class="lbl" for="name">{{ t.full_name }}</label>
+        <input class="inp" id="name" name="name" value="{{ user.name }}" maxlength="60" required>
+      </div>
+      <div>
+        <label class="lbl" for="lang">{{ t.set_language }}</label>
+        <select class="inp" id="lang" name="lang">
+          {% for code in languages %}
+          <option value="{{ code }}" {{ 'selected' if code == (user.lang or lang) }}>{{ {'en': 'English', 'rw': 'Kinyarwanda'}[code] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="lbl" for="ph">{{ t.set_phone }}</label>
+        <input class="inp" id="ph" value="{{ user.phone }}" disabled>
+      </div>
+      <div>
+        <label class="lbl" for="rl">{{ t.set_account_type }}</label>
+        <input class="inp" id="rl" value="{{ t['role_' ~ user.role] }}" disabled>
+      </div>
+      <div class="full"><button class="btn">{{ t.set_save }}</button></div>
+    </div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>{{ t.set_pin_h }}</h2>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="pin">
+    <div class="fgrid">
+      <div>
+        <label class="lbl" for="cur">{{ t.pin_current }}</label>
+        <input class="inp" id="cur" name="current" type="password" inputmode="numeric" autocomplete="current-password" required>
+      </div>
+      <div></div>
+      <div>
+        <label class="lbl" for="n1">{{ t.pin_new2 }}</label>
+        <input class="inp" id="n1" name="new" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="new-password" required>
+      </div>
+      <div>
+        <label class="lbl" for="n2">{{ t.pin_confirm }}</label>
+        <input class="inp" id="n2" name="new2" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="new-password" required>
+      </div>
+      <div class="full"><button class="btn">{{ t.pin_change_btn }}</button></div>
+    </div>
+  </form>
+</section>
+
+{% if user.role == 'user' %}
+<section class="panel">
+  <h2>{{ t.set_delete_h }}</h2>
+  <p class="muted">{{ t.set_delete_p }}</p>
+  <form method="post" onsubmit='return confirm({{ t.set_delete_p|tojson }})'>
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="delete">
+    <label class="lbl" for="dcur">{{ t.pin_current }}</label>
+    <input class="inp" id="dcur" name="current" type="password" inputmode="numeric" autocomplete="current-password" required style="max-width:260px">
+    <button class="btn ghost" style="margin-top:12px;color:var(--out)">{{ t.set_delete_btn }}</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

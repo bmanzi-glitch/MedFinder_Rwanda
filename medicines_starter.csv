@@ -1,0 +1,151 @@
+name,strength,form,aliases
+Paracetamol,500mg,tablet,"Panadol, Doliprane"
+Paracetamol,120mg/5ml,syrup,"Panadol syrup, Calpol"
+Ibuprofen,400mg,tablet,"Brufen, Advil"
+Ibuprofen,100mg/5ml,syrup,Brufen
+Diclofenac,50mg,tablet,Voltaren
+Diclofenac,75mg/3ml,injection,Voltaren
+Naproxen,250mg,tablet,Naprosyn
+Aspirin,300mg,tablet,Disprin
+Amoxicillin,250mg,capsule,Amoxil
+Amoxicillin,500mg,capsule,Amoxil
+Amoxicillin,125mg/5ml,suspension,Amoxil
+Amoxicillin + clavulanic acid,625mg,tablet,"Augmentin, Co-amoxiclav"
+Ampicillin,500mg,capsule,
+Ampicillin,500mg,injection,
+Benzylpenicillin,1MIU,injection,Penicillin G
+Benzathine benzylpenicillin,2.4MIU,injection,"Penadur, Bicillin"
+Cloxacillin,500mg,capsule,
+Azithromycin,500mg,tablet,Zithromax
+Azithromycin,200mg/5ml,suspension,Zithromax
+Erythromycin,250mg,tablet,
+Doxycycline,100mg,capsule,Vibramycin
+Ciprofloxacin,500mg,tablet,Cipro
+Ceftriaxone,1g,injection,Rocephin
+Cefixime,200mg,tablet,Suprax
+Cefuroxime,500mg,tablet,Zinnat
+Cephalexin,500mg,capsule,Keflex
+Metronidazole,400mg,tablet,Flagyl
+Metronidazole,200mg/5ml,suspension,Flagyl
+Cotrimoxazole,480mg,tablet,"Septrin, Bactrim"
+Cotrimoxazole,240mg/5ml,suspension,"Septrin, Bactrim"
+Gentamicin,80mg/2ml,injection,Garamycin
+Nitrofurantoin,100mg,tablet,Furadantin
+Clindamycin,300mg,capsule,Dalacin C
+Chloramphenicol,0.5%,eye drops,
+Artemether + lumefantrine,20mg/120mg,tablet,"Coartem, Lumartem"
+Artesunate,60mg,injection,
+Artesunate + amodiaquine,100mg/270mg,tablet,"ASAQ, Coarsucam"
+Quinine,300mg,tablet,
+Quinine,300mg/ml,injection,
+Sulfadoxine + pyrimethamine,500mg/25mg,tablet,"Fansidar, SP"
+Primaquine,15mg,tablet,
+Dihydroartemisinin + piperaquine,40mg/320mg,tablet,"Eurartesim, DHA-PPQ"
+Albendazole,400mg,tablet,Zentel
+Mebendazole,100mg,tablet,Vermox
+Praziquantel,600mg,tablet,Biltricide
+Ivermectin,3mg,tablet,Stromectol
+Tinidazole,500mg,tablet,Fasigyn
+Fluconazole,150mg,capsule,Diflucan
+Clotrimazole,1%,cream,Canesten
+Nystatin,100000IU/ml,oral suspension,
+Griseofulvin,500mg,tablet,
+Miconazole,2%,cream,Daktarin
+Tenofovir + lamivudine + dolutegravir,300mg/300mg/50mg,tablet,TLD
+Isoniazid,300mg,tablet,
+Rifampicin + isoniazid + pyrazinamide + ethambutol,150mg/75mg/400mg/275mg,tablet,RHZE
+Amlodipine,5mg,tablet,Norvasc
+Amlodipine,10mg,tablet,Norvasc
+Atenolol,50mg,tablet,Tenormin
+Enalapril,5mg,tablet,Renitec
+Lisinopril,10mg,tablet,Zestril
+Losartan,50mg,tablet,Cozaar
+Hydrochlorothiazide,25mg,tablet,
+Furosemide,40mg,tablet,Lasix
+Furosemide,20mg/2ml,injection,Lasix
+Nifedipine,20mg,tablet,Adalat
+Methyldopa,250mg,tablet,Aldomet
+Carvedilol,6.25mg,tablet,
+Simvastatin,20mg,tablet,Zocor
+Atorvastatin,20mg,tablet,Lipitor
+Digoxin,0.25mg,tablet,Lanoxin
+Spironolactone,25mg,tablet,Aldactone
+Aspirin,75mg,tablet,Cardiprin
+Glyceryl trinitrate,0.5mg,sublingual tablet,Nitroglycerin
+Warfarin,5mg,tablet,Coumadin
+Clopidogrel,75mg,tablet,Plavix
+Hydralazine,20mg,injection,Apresoline
+Metformin,500mg,tablet,Glucophage
+Metformin,850mg,tablet,Glucophage
+Glibenclamide,5mg,tablet,Daonil
+Gliclazide,80mg,tablet,Diamicron
+Insulin human soluble,100IU/ml,injection,"Actrapid, Humulin R"
+Insulin isophane,100IU/ml,injection,"Insulatard, Humulin N"
+Salbutamol,100mcg,inhaler,"Ventolin, Albuterol"
+Salbutamol,4mg,tablet,Ventolin
+Salbutamol,2mg/5ml,syrup,Ventolin
+Beclometasone,100mcg,inhaler,Becotide
+Prednisolone,5mg,tablet,
+Dexamethasone,4mg,tablet,Decadron
+Dexamethasone,4mg/ml,injection,Decadron
+Hydrocortisone,100mg,injection,Solu-Cortef
+Aminophylline,250mg/10ml,injection,
+Cetirizine,10mg,tablet,Zyrtec
+Chlorphenamine,4mg,tablet,Piriton
+Loratadine,10mg,tablet,Claritin
+Promethazine,25mg,tablet,Phenergan
+Promethazine,5mg/5ml,syrup,Phenergan
+Epinephrine,1mg/ml,injection,Adrenaline
+Omeprazole,20mg,capsule,Losec
+Famotidine,20mg,tablet,Pepcid
+Aluminium hydroxide + magnesium hydroxide,,suspension,Maalox
+Oral rehydration salts,1 litre,sachet,ORS
+Zinc sulfate,20mg,dispersible tablet,Zinc
+Loperamide,2mg,capsule,Imodium
+Hyoscine butylbromide,10mg,tablet,Buscopan
+Metoclopramide,10mg,tablet,Maxolon
+Ondansetron,4mg,tablet,Zofran
+Ondansetron,4mg/2ml,injection,Zofran
+Bisacodyl,5mg,tablet,Dulcolax
+Lactulose,3.35g/5ml,syrup,Duphalac
+Domperidone,10mg,tablet,Motilium
+Ferrous sulfate,200mg,tablet,Iron
+Ferrous sulfate + folic acid,200mg/0.4mg,tablet,Iron-folate
+Folic acid,5mg,tablet,
+Vitamin A,200000IU,capsule,
+Vitamin B complex,,tablet,Becosules
+Vitamin C,500mg,tablet,Ascorbic acid
+Calcium carbonate,500mg,tablet,Calcium
+Sodium chloride,0.9%,infusion,Normal saline
+Phytomenadione,10mg/ml,injection,Vitamin K1
+Cyanocobalamin,1000mcg/ml,injection,Vitamin B12
+Oxytocin,10IU,injection,"Pitocin, Syntocinon"
+Misoprostol,200mcg,tablet,Cytotec
+Methylergometrine,0.2mg/ml,injection,Methergine
+Magnesium sulfate,500mg/ml,injection,
+Levonorgestrel,1.5mg,tablet,"Postinor, Plan B"
+Levonorgestrel + ethinylestradiol,0.15mg/0.03mg,tablet,"Microgynon, Combined pill"
+Medroxyprogesterone,150mg/ml,injection,Depo-Provera
+Etonogestrel,68mg,implant,"Implanon, Nexplanon"
+Ringer's lactate,,infusion,Hartmann's
+Tranexamic acid,500mg,tablet,Cyklokapron
+Carbamazepine,200mg,tablet,Tegretol
+Phenytoin,100mg,capsule,Epanutin
+Sodium valproate,200mg,tablet,Epilim
+Amitriptyline,25mg,tablet,Elavil
+Fluoxetine,20mg,capsule,Prozac
+Haloperidol,5mg,tablet,Serenace
+Chlorpromazine,100mg,tablet,Largactil
+Tetracycline,1%,eye ointment,
+Ciprofloxacin,0.3%,eye drops,
+Hydrocortisone,1%,cream,
+Betamethasone,0.1%,cream,Betnovate
+Silver sulfadiazine,1%,cream,Flamazine
+Benzyl benzoate,25%,lotion,
+Permethrin,5%,lotion,
+Dextrose,5%,infusion,Glucose 5%
+Povidone iodine,10%,solution,Betadine
+Chlorhexidine,0.5%,solution,Hibitane
+Tranexamic acid,100mg/ml,injection,Cyklokapron
+Atropine,1mg/ml,injection,
+Lidocaine,2%,injection,Xylocaine

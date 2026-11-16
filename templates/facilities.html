@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% set icons = {'listed': '✓', 'unlisted': '?'} %}
+{% block title %}{{ t.dir_h }} - {{ t.title }}{% endblock %}
+{% block body %}
+<h1 class="pg-h">{{ t.dir_h }}</h1>
+<p class="lead2">{{ t.dir_lead }}</p>
+
+<form method="get" class="panel dirfilter" role="search">
+  <input class="inp" name="q" value="{{ q }}" placeholder="{{ t.dir_search_ph }}" aria-label="{{ t.dir_search_ph }}">
+  <select class="inp" name="district" aria-label="{{ t.district }}">
+    <option value="">{{ t.district_all }}</option>
+    {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
+  </select>
+  <select class="inp" name="type" aria-label="{{ t.type_label }}">
+    <option value="">{{ t.dir_all_types }}</option>
+    {% for ty in valid_types %}<option value="{{ ty }}" {{ 'selected' if ty == ftype }}>{{ t['type_' ~ ty] }}</option>{% endfor %}
+  </select>
+  <button class="btn">{{ t.filter }}</button>
+</form>
+
+{% if not rows %}
+  <div class="empty"><h3>{{ t.dir_none }}</h3></div>
+{% else %}
+  <div class="resbar">
+    <p class="count">{{ t.dir_one if total == 1 else t.dir_found.format(n=total) }}</p>
+    {% if map_points %}
+    <div class="viewtabs" role="tablist">
+      <button type="button" role="tab" id="tab-list" aria-selected="true" aria-controls="list-wrap">{{ t.view_list }}</button>
+      <button type="button" role="tab" id="tab-map" aria-selected="false" aria-controls="map-wrap">{{ t.view_map }}</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="list-wrap">
+    <div class="grid">
+      {% for r in rows %}
+      <article class="res {{ 'in_stock' if r.n_stock else 'unverified' }}">
+        <div class="res-top">
+          <h3>{{ r.name }}</h3>
+          {% set k = 'in_stock' if r.n_stock else 'unverified' %}
+          <span class="pill {{ k }}"><i aria-hidden="true">{{ '✓' if r.n_stock else '?' }}</i>{{ t.dir_reports if r.n_stock else t.dir_no_reports }}</span>
+        </div>
+        <div class="where">{{ t['type_' ~ r.type] }} {{ t.in_word }} {% if r.sector %}{{ r.sector }}, {% endif %}{{ r.district }}</div>
+        {% if r.opening_hours %}<div class="when">{{ t.dir_hours }}: {{ r.opening_hours }}</div>{% endif %}
+        <div class="acts">
+          <a class="dir" href="{{ url_for('facility', fid=r.facility_id) }}">{{ t.dir_view }}</a>
+          {% if r.phone %}<a class="dir" href="tel:{{ r.phone|replace(' ', '') }}">{{ t.dir_call }}: {{ r.phone }}</a>{% endif %}
+          {% if r.lat is not none and r.lng is not none %}
+          <a class="dir" href="https://www.google.com/maps/dir/?api=1&destination={{ r.lat }},{{ r.lng }}" target="_blank" rel="noopener">{{ t.directions }}</a>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% if pages > 1 %}
+    <div class="pager">
+      <a class="btn ghost sm {{ 'off' if page <= 1 }}" href="{{ url_for('facilities', page=page-1, **qs) }}">&larr; {{ t.dir_prev }}</a>
+      <span class="muted">{{ t.dir_page.format(p=page, n=pages) }}</span>
+      <a class="btn ghost sm {{ 'off' if page >= pages }}" href="{{ url_for('facilities', page=page+1, **qs) }}">{{ t.dir_next }} &rarr;</a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if map_points %}
+  <div id="map-wrap" role="tabpanel" aria-labelledby="tab-map" hidden>
+    <div id="map" role="region" aria-label="{{ t.view_map }}"></div>
+    <p id="map-note" class="muted" role="status"></p>
+  </div>
+  <script id="map-data" type="application/json">{{ map_points|tojson }}</script>
+  <script id="map-cfg" type="application/json">{{ {
+    'view': t.map_view_fac, 'fail': t.map_fail, 'loading': t.map_loading,
+    'missing': t.map_missing.format(n=map_missing) if map_missing else ''
+  }|tojson }}</script>
+  {% endif %}
+{% endif %}
+
+<div class="note" style="margin-top:28px">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="flex:none;margin-top:1px" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>
+  <span>{{ t.fac_osm_note }}</span>
+</div>
+
+<script>
+(function () {
+  var dataEl = document.getElementById('map-data');
+  if (!dataEl) { return; }
+  var pts = JSON.parse(dataEl.textContent), C = JSON.parse(document.getElementById('map-cfg').textContent);
+  var tabList = document.getElementById('tab-list'), tabMap = document.getElementById('tab-map');
+  var listWrap = document.getElementById('list-wrap'), mapWrap = document.getElementById('map-wrap');
+  var note = document.getElementById('map-note'), map = null, loading = false;
+
+  function show(which) {
+    var m = which === 'map';
+    tabMap.setAttribute('aria-selected', m); tabList.setAttribute('aria-selected', !m);
+    mapWrap.hidden = !m; listWrap.hidden = m;
+    if (m) { start(); }
+  }
+  function start() {
+    if (map) { setTimeout(function () { map.invalidateSize(); }, 0); return; }
+    if (window.L) { build(); return; }
+    if (loading) { return; }
+    loading = true; note.textContent = C.loading;
+    var css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    var js = document.createElement('script');
+    js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.onload = function () { loading = false; build(); };
+    js.onerror = function () { loading = false; note.textContent = C.fail; };
+    document.head.appendChild(js);
+  }
+  function build() {
+    note.textContent = C.missing;
+    map = L.map('map');
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+    var bounds = [];
+    pts.forEach(function (p) {
+      var icon = L.divIcon({ className: 'pinwrap', html: '<span class="pin ' + p.status + '"></span>',
+                             iconSize: [22, 22], iconAnchor: [11, 11] });
+      var box = document.createElement('div'); box.className = 'pop';
+      var h = document.createElement('strong'); h.textContent = p.name;
+      var m = document.createElement('div'); m.textContent = p.med;
+      var s = document.createElement('div'); s.textContent = p.label;
+      var a = document.createElement('a'); a.href = p.url; a.textContent = C.view;
+      box.appendChild(h); box.appendChild(m); box.appendChild(s); box.appendChild(a);
+      L.marker([p.lat, p.lng], { icon: icon, title: p.name }).addTo(map).bindPopup(box);
+      bounds.push([p.lat, p.lng]);
+    });
+    if (bounds.length === 1) { map.setView(bounds[0], 15); } else { map.fitBounds(bounds, { padding: [30, 30] }); }
+  }
+  tabList.addEventListener('click', function () { show('list'); });
+  tabMap.addEventListener('click', function () { show('map'); });
+})();
+</script>
+{% endblock %}
