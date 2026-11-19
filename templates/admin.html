@@ -1,15 +1,20 @@
 {% extends "base.html" %}
+{% block title %}{{ t.admin_h if session.role == 'admin' else t.reports_h }} - {{ t.title }}{% endblock %}
 {% block body %}
-<h1 style="font-size:1.8rem;margin-bottom:14px">{{ t.admin_h if session.role == 'admin' else t.reports_h }}</h1>
-{% include "_admin_nav.html" %}
-
-<form method="get" class="filterbar">
-  <select class="inp" name="district" aria-label="{{ t.district }}" style="max-width:260px">
-    <option value="">{{ t.district_all }}</option>
-    {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
-  </select>
-  <button class="btn ghost">{{ t.filter }}</button>
-</form>
+<div class="hello">
+  <span class="ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
+  <div class="grow">
+    <h1>{{ t.admin_h if session.role == 'admin' else t.reports_h }}</h1>
+    <p>{{ district or t.district_all }}</p>
+  </div>
+  <form method="get" class="filterbar" style="margin:0;flex-wrap:nowrap">
+    <select class="inp" name="district" aria-label="{{ t.district }}" style="max-width:200px;padding:9px 12px">
+      <option value="">{{ t.district_all }}</option>
+      {% for d in districts %}<option {{ 'selected' if d == district }}>{{ d }}</option>{% endfor %}
+    </select>
+    <button class="btn sm" style="background:var(--sun);color:var(--sun-ink)">{{ t.filter }}</button>
+  </form>
+</div>
 
 <div class="stats">
   <div class="stat"><b>{{ n_active }}</b><span>{{ t.stat_facilities }}</span></div>
@@ -33,49 +38,51 @@
   </table></div>
 </section>
 
-<section class="panel">
-  <h2>{{ t.low_monitor_h }}</h2>
-  <div class="tbl-wrap"><table>
-    <tr><th>{{ t.th_facility }}</th><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
-    {% for r in low %}
-    <tr>
-      <td><b>{{ r.facility }}</b> <span class="muted">{{ r.district }}</span></td>
-      <td>{{ r.medicine }} <span class="muted">{{ r.strength }}</span></td>
-      <td class="num">{{ r.quantity }}</td>
-      <td><span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'low':'!','out':'×'}[r.status] }}</i>{{ t[r.status] }}</span></td>
-      <td class="muted" title="{{ r.last_updated|kigali }}">{{ r.last_updated|ago }}</td>
-    </tr>
-    {% else %}<tr><td colspan="5" class="muted">{{ t.no_low }}</td></tr>{% endfor %}
-  </table></div>
-</section>
+<div class="cols">
+  <section class="panel">
+    <h2>{{ t.low_monitor_h }}</h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>{{ t.th_facility }}</th><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
+      {% for r in low %}
+      <tr>
+        <td><b>{{ r.facility }}</b> <span class="muted">{{ r.district }}</span></td>
+        <td>{{ r.medicine }} <span class="muted">{{ r.strength }}</span></td>
+        <td class="num">{{ r.quantity }}</td>
+        <td><span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'low':'!','out':'×'}[r.status] }}</i>{{ t[r.status] }}</span></td>
+        <td class="muted" title="{{ r.last_updated|kigali }}">{{ r.last_updated|ago }}</td>
+      </tr>
+      {% else %}<tr><td colspan="5" class="muted">{{ t.no_low }}</td></tr>{% endfor %}
+    </table></div>
+  </section>
 
-<section class="panel">
-  <h2>{{ t.stale_h }}</h2>
-  <div class="tbl-wrap"><table>
-    <tr><th>{{ t.th_facility }}</th><th>{{ t.th_district }}</th><th>{{ t.th_last }}</th></tr>
-    {% for f in stale %}
-    <tr><td><b>{{ f.name }}</b></td><td>{{ f.district }}</td>
-        <td class="muted">{{ f.last|ago if f.last else t.never }}</td></tr>
-    {% else %}<tr><td colspan="3" class="muted">{{ t.no_stale }}</td></tr>{% endfor %}
-  </table></div>
-</section>
+  <section class="panel">
+    <h2>{{ t.stale_h }}</h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>{{ t.th_facility }}</th><th>{{ t.th_district }}</th><th>{{ t.th_last }}</th></tr>
+      {% for f in stale %}
+      <tr><td><b>{{ f.name }}</b></td><td>{{ f.district }}</td>
+          <td class="muted">{{ f.last|ago if f.last else t.never }}</td></tr>
+      {% else %}<tr><td colspan="3" class="muted">{{ t.no_stale }}</td></tr>{% endfor %}
+    </table></div>
+  </section>
 
-<section class="panel">
-  <h2>{{ t.top_out_h }}</h2>
-  <div class="tbl-wrap"><table>
-    {% for r in top_out %}<tr><td><b>{{ r.name }}</b></td><td class="num">{{ r.n }} {{ t.facility_one if r.n == 1 else t.facility_many }}</td></tr>
-    {% else %}<tr><td class="muted">{{ t.no_out }}</td></tr>{% endfor %}
-  </table></div>
-</section>
+  <section class="panel">
+    <h2>{{ t.top_out_h }}</h2>
+    <div class="tbl-wrap"><table>
+      {% for r in top_out %}<tr><td><b>{{ r.name }}</b></td><td class="num">{{ r.n }} {{ t.facility_one if r.n == 1 else t.facility_many }}</td></tr>
+      {% else %}<tr><td class="muted">{{ t.no_out }}</td></tr>{% endfor %}
+    </table></div>
+  </section>
 
-<section class="panel">
-  <h2>{{ t.unmet_h }}</h2>
-  <div class="tbl-wrap"><table>
-    <tr><th>{{ t.th_query }}</th><th>{{ t.th_district }}</th><th>{{ t.th_times }}</th></tr>
-    {% for r in unmet %}<tr><td><b>{{ r.q }}</b></td><td>{{ r.district or t.district_all }}</td><td class="num">{{ r.n }}</td></tr>
-    {% else %}<tr><td colspan="3" class="muted">{{ t.no_unmet }}</td></tr>{% endfor %}
-  </table></div>
-</section>
+  <section class="panel">
+    <h2>{{ t.unmet_h }}</h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>{{ t.th_query }}</th><th>{{ t.th_district }}</th><th>{{ t.th_times }}</th></tr>
+      {% for r in unmet %}<tr><td><b>{{ r.q }}</b></td><td>{{ r.district or t.district_all }}</td><td class="num">{{ r.n }}</td></tr>
+      {% else %}<tr><td colspan="3" class="muted">{{ t.no_unmet }}</td></tr>{% endfor %}
+    </table></div>
+  </section>
+</div>
 
 <section class="panel">
   <h2>{{ t.searches_h }}</h2>

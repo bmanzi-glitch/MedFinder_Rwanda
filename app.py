@@ -1058,7 +1058,7 @@ def sms_inbound():
     if len(tokens) < 2:
         return Response(STRINGS[lang]["sms_help"], mimetype="text/plain")
     med_words, district = tokens[:-1], tokens[-1]
-    # "amoxicillin 250mg" -> try the full text first, then drop words from the end until something matches
+  
     results = []
     for n in range(len(med_words), 0, -1):
         results = search_stock(" ".join(med_words[:n]), district)
@@ -1069,5 +1069,5 @@ def sms_inbound():
 
 
 if __name__ == "__main__":
-    # Debug mode shows an interactive console to anyone who can reach the page, so it is opt-in.
+
     app.run(debug=os.environ.get("MEDFINDER_DEBUG") == "1", use_reloader=False)

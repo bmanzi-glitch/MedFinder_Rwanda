@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block body %}
-<h1 style="font-size:1.8rem">{{ facility.name }}</h1>
-<p class="muted" style="margin:4px 0 20px">{{ t['type_' ~ facility.type] }} {{ t.in_word }} {{ facility.district }}. {{ t.dash_lead }}</p>
+<div class="hello">
+  <span class="ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg></span>
+  <div class="grow"><h1>{{ facility.name }}</h1><p>{{ t['type_' ~ facility.type] }} {{ t.in_word }} {{ facility.district }}. {{ t.dash_lead }}</p></div>
+</div>
 
 <div class="stats">
   <div class="stat"><b>{{ stock|length }}</b><span>{{ t.stat_tracked }}</span></div>

@@ -368,7 +368,55 @@ def build_strings(REMINDER_HOURS):
         },
     }
 
-    for _extra in (HOME_STRINGS, SITE_STRINGS):
+    # Sidebar groups and the new home page sections (added with the sidebar redesign).
+    LOOK_STRINGS = {
+        "en": {
+            "grp_search": "Search", "grp_info": "Information", "grp_manage": "Manage", "grp_account": "Account",
+            "side_close": "Close menu",
+            "alt_hero": "A pharmacist in a Rwandan pharmacy helping a customer check a medicine",
+            "alt_shelf": "A pharmacist scanning medicine boxes on a shelf",
+            "alt_tablet": "A pharmacist checking stock on a tablet",
+            "alt_counter": "A pharmacy counter with medicine shelves behind it",
+            "alt_scan": "A pharmacy worker updating stock with a handheld scanner",
+            "alt_map": "Map of Rwanda showing its provinces",
+            "stat_live": "Live from facilities",
+            "how_sub": "Three steps, about a minute.",
+            "need_sub": "Tap a common need to search for the medicine most people ask for.",
+            "staff_h": "Run a pharmacy or health center?",
+            "staff_p": "Report your stock once a day and patients near you will find you first. Updating takes less than a minute, and you get an SMS when a medicine runs low.",
+            "staff_b1": "Enter a quantity and save",
+            "staff_b2": "Low-stock alerts by SMS",
+            "staff_b3": "Free for every facility",
+            "staff_cta": "Ask for a staff account",
+            "cover_h": "Starting in Kigali, built for all of Rwanda",
+            "cover_p": "We are listing the pharmacies and health centers of Kigali first. More districts follow as facilities begin to report their stock.",
+            "cover_cta": "Browse the directory",
+        },
+        "rw": {
+            "grp_search": "Shakisha", "grp_info": "Amakuru", "grp_manage": "Gucunga", "grp_account": "Konti",
+            "side_close": "Funga menu",
+            "alt_hero": "Umufarumasiye muri farumasi yo mu Rwanda afasha umukiriya kureba umuti",
+            "alt_shelf": "Umufarumasiye asuzuma amakarito y'imiti ku gipangu",
+            "alt_tablet": "Umufarumasiye asuzuma ububiko kuri tablet",
+            "alt_counter": "Aho bakirira abakiriya muri farumasi, inyuma hari ibipangu by'imiti",
+            "alt_scan": "Umukozi wa farumasi avugurura ububiko akoresheje igikoresho gisoma",
+            "alt_map": "Ikarita y'u Rwanda yerekana intara",
+            "stat_live": "Biturutse ku bigo ubu",
+            "how_sub": "Intambwe eshatu, hafi umunota umwe.",
+            "need_sub": "Kanda icyo ukeneye ushakishe umuti abantu benshi babaza.",
+            "staff_h": "Ufite farumasi cyangwa ikigo nderabuzima?",
+            "staff_p": "Tanga ububiko bwawe rimwe ku munsi, abarwayi bakwegereye bazakubona mbere. Kuvugurura bitwara munsi y'umunota, kandi wohererezwa SMS iyo umuti ugiye gushira.",
+            "staff_b1": "Andika ingano ubike",
+            "staff_b2": "Integuza za SMS iyo umuti ushira",
+            "staff_b3": "Ni ubuntu ku kigo cyose",
+            "staff_cta": "Saba konti y'umukozi",
+            "cover_h": "Dutangiriye i Kigali, twubakiye u Rwanda rwose",
+            "cover_p": "Turabanza kwandika farumasi n'ibigo nderabuzima byo mu Mujyi wa Kigali. Uturere tundi tuzakurikiraho ibigo bitangiye gutanga ububiko bwabyo.",
+            "cover_cta": "Reba urutonde rw'ibigo",
+        },
+    }
+
+    for _extra in (HOME_STRINGS, SITE_STRINGS, LOOK_STRINGS):
         for _lang, _text in _extra.items():
             STRINGS[_lang].update(_text)
     return STRINGS

@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block body %}
-<h1 style="font-size:1.8rem;margin-bottom:14px">{{ t.admin_h }}</h1>
-{% include "_admin_nav.html" %}
+<div class="hello">
+  <span class="ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5l-7-7a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7zM8.5 8.5l7 7"/></svg></span>
+  <div class="grow"><h1>{{ t.nav_medicines }}</h1><p>{{ t.admin_h }}</p></div>
+</div>
 
 <section class="panel">
   <h2>{{ t.med_add_h }}</h2>
