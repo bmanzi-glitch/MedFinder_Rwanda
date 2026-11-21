@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ t.title }}{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+  <meta name="theme-color" content="#0d3b36">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -28,11 +32,14 @@
     .skip { position:absolute; left:-999px; top:8px; background:#fff; color:var(--deep); padding:10px 16px; border-radius:10px; font-weight:700; z-index:60; }
     .skip:focus { left:12px; }
 
-
+    /* ---------- layout: sidebar + content ---------- */
     .shell { display:grid; grid-template-columns:var(--side) minmax(0,1fr); min-height:100vh; }
     .side { position:sticky; top:0; height:100vh; overflow-y:auto; background:var(--deep); color:#fff; display:flex; flex-direction:column; padding:18px 14px 16px; z-index:40; }
     .brand { display:flex; align-items:center; gap:10px; text-decoration:none; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:1.2rem; padding:4px 8px 18px; white-space:nowrap; }
     .brand svg { flex:none; }
+    .brand .tile { flex:none; width:44px; height:44px; border-radius:12px; background:#fff; display:grid; place-items:center; }
+    .brand .tile img { height:34px; width:auto; display:block; }
+    .brand .nm { white-space:normal; line-height:1.08; font-size:1.08rem; }
     .side nav { display:grid; gap:2px; }
     .side .grp { font-size:.76rem; font-weight:600; color:#8fb3ab; padding:16px 10px 6px; margin:0; letter-spacing:.02em; }
     .side nav a, .side nav button { display:flex; align-items:center; gap:11px; text-decoration:none; font:inherit; font-weight:600; font-size:.95rem; color:#ffffffd6; padding:9px 10px; border-radius:10px; border:0; background:none; width:100%; text-align:left; cursor:pointer; }
@@ -69,6 +76,8 @@
       .scrim.open { display:block; position:fixed; inset:0; background:#0008; z-index:35; }
       .mobbar { display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:30; background:var(--deep); color:#fff; padding:10px 14px; }
       .mobbar .brand { padding:0; font-size:1.1rem; }
+      .mobbar .brand .tile { width:38px; height:38px; border-radius:10px; }
+      .mobbar .brand .tile img { height:29px; }
       .mobbar .mb { margin-left:auto; display:flex; align-items:center; gap:8px; }
       .mobbar button { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:10px; border:1.5px solid #ffffff55; background:transparent; color:#fff; cursor:pointer; }
       main { padding:22px 16px 44px; }
@@ -76,7 +85,7 @@
     }
     @media (prefers-reduced-motion:reduce) { .side { transition:none; } html { scroll-behavior:auto; } }
 
-
+    /* ---------- hero + search ---------- */
     .hero { background:var(--deep); color:#fff; margin:22px 32px 0; border-radius:28px; overflow:hidden; position:relative; }
     .hero-in { display:grid; }
     .hero-copy { padding:46px 44px 44px; position:relative; z-index:1; }
@@ -125,7 +134,7 @@
     .live-card span.l { font-size:.78rem; color:var(--muted); }
     .live-card .t { font-size:.78rem; color:var(--muted); margin-top:6px; }
 
-  
+    /* ---------- results ---------- */
     .pull { padding-top:6px; }
     .count { font-weight:600; margin:0 0 12px; color:var(--muted); }
     .grid { display:grid; gap:12px; }
@@ -170,7 +179,7 @@
     .pop strong { display:block; }
     .pop a { font-weight:700; color:var(--teal); }
 
-
+    /* ---------- generic ---------- */
     .flash { background:#fff3cf; border:1px solid #f0d78a; padding:10px 14px; border-radius:12px; margin:0 0 16px; font-weight:500; }
     main.flush .flash { margin:16px 32px 0; }
     .panel { background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:20px; margin:0 0 18px; }
@@ -247,6 +256,7 @@
     .foot { background:#fff; border-top:1px solid var(--line); margin-top:auto; }
     .foot-in { max-width:1180px; margin:0 auto; padding:34px 32px 0; display:grid; gap:28px; }
     @media (min-width:760px) { .foot-in { grid-template-columns:1.5fr 1fr 1fr; } }
+    .foot .flogo { display:block; width:190px; max-width:100%; height:auto; margin:0 0 6px; }
     .foot .fbrand { display:flex; align-items:center; gap:9px; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:1.1rem; color:var(--deep); text-decoration:none; }
     .foot p { margin:10px 0 0; max-width:44ch; font-size:.93rem; color:var(--muted); }
     .foot h2 { font-family:'Figtree',sans-serif; font-size:.82rem; font-weight:700; color:var(--ink); margin-bottom:10px; letter-spacing:.01em; }
@@ -288,10 +298,7 @@
   <aside class="side" id="side" aria-label="{{ t.nav_menu }}">
     <div class="x"><button type="button" id="side-close" aria-label="{{ t.side_close }}">{{ ic('close') }}</button></div>
     <a class="brand" href="{{ url_for('home') }}" aria-label="{{ t.title }}">
-      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
-        <path d="M16 2C9.9 2 5 6.8 5 12.8 5 20.6 16 30 16 30s11-9.4 11-17.2C27 6.8 22.1 2 16 2z" fill="#f5b82e"/>
-        <path d="M14 8h4v4h4v4h-4v4h-4v-4h-4v-4h4z" fill="#0d3b36"/>
-      </svg>
+      <span class="tile"><img src="{{ url_for('static', filename='img/logo-pin.png') }}" alt="" width="30" height="36"></span>
       <span class="nm">MedFinder Rwanda</span>
     </a>
 
@@ -352,10 +359,7 @@
   <div class="content">
     <header class="mobbar">
       <a class="brand" href="{{ url_for('home') }}" aria-label="{{ t.title }}">
-        <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M16 2C9.9 2 5 6.8 5 12.8 5 20.6 16 30 16 30s11-9.4 11-17.2C27 6.8 22.1 2 16 2z" fill="#f5b82e"/>
-          <path d="M14 8h4v4h4v4h-4v4h-4v-4h-4v-4h4z" fill="#0d3b36"/>
-        </svg>MedFinder
+        <span class="tile"><img src="{{ url_for('static', filename='img/logo-pin.png') }}" alt="" width="30" height="36"></span>MedFinder
       </a>
       <div class="mb">
         <button type="button" id="menu-btn" aria-expanded="false" aria-controls="side" aria-label="{{ t.nav_menu }}">{{ ic('menu') }}</button>
@@ -369,9 +373,8 @@
     <footer class="foot">
       <div class="foot-in">
         <div>
-          <a class="fbrand" href="{{ url_for('home') }}">
-            <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2C9.9 2 5 6.8 5 12.8 5 20.6 16 30 16 30s11-9.4 11-17.2C27 6.8 22.1 2 16 2z" fill="#f5b82e"/><path d="M14 8h4v4h4v4h-4v4h-4v-4h-4v-4h4z" fill="#0d3b36"/></svg>
-            MedFinder Rwanda
+          <a class="fbrand" href="{{ url_for('home') }}" aria-label="{{ t.title }}">
+            <img class="flogo" src="{{ url_for('static', filename='img/logo-full.png') }}" alt="MedFinder Rwanda" width="190" height="136">
           </a>
           <p>{{ t.footer_about }}</p>
           {% if contact_ready %}
