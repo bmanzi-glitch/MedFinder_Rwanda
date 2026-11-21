@@ -22,7 +22,7 @@
   <div class="stat"><b>{{ stale|length }}</b><span>{{ t.stat_stale }}</span></div>
 </div>
 
-<section class="panel">
+<section class="panel fill">
   <h2>{{ t.acc_h }}</h2>
   <div class="stats">
     <div class="stat"><b>{{ accuracy ~ '%' if accuracy is not none else '–' }}</b><span>{{ t.stat_accuracy }}</span></div>
@@ -38,50 +38,52 @@
   </table></div>
 </section>
 
+<section class="panel">
+  <h2>{{ t.low_monitor_h }}</h2>
+  <div class="tbl-wrap scroll"><table>
+    <tr><th>{{ t.th_facility }}</th><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
+    {% for r in low %}
+    <tr>
+      <td><b>{{ r.facility }}</b> <span class="muted">{{ r.district }}</span></td>
+      <td>{{ r.medicine }} <span class="muted">{{ r.strength }}</span></td>
+      <td class="num">{{ r.quantity }}</td>
+      <td><span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'low':'!','out':'×'}[r.status] }}</i>{{ t[r.status] }}</span></td>
+      <td class="muted nw" title="{{ r.last_updated|kigali }}">{{ r.last_updated|ago }}</td>
+    </tr>
+    {% else %}<tr><td colspan="5" class="muted">{{ t.no_low }}</td></tr>{% endfor %}
+  </table></div>
+</section>
+
 <div class="cols">
   <section class="panel">
-    <h2>{{ t.low_monitor_h }}</h2>
-    <div class="tbl-wrap"><table>
-      <tr><th>{{ t.th_facility }}</th><th>{{ t.th_medicine }}</th><th>{{ t.th_qty }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
-      {% for r in low %}
-      <tr>
-        <td><b>{{ r.facility }}</b> <span class="muted">{{ r.district }}</span></td>
-        <td>{{ r.medicine }} <span class="muted">{{ r.strength }}</span></td>
-        <td class="num">{{ r.quantity }}</td>
-        <td><span class="pill {{ r.status }}"><i aria-hidden="true">{{ {'low':'!','out':'×'}[r.status] }}</i>{{ t[r.status] }}</span></td>
-        <td class="muted" title="{{ r.last_updated|kigali }}">{{ r.last_updated|ago }}</td>
-      </tr>
-      {% else %}<tr><td colspan="5" class="muted">{{ t.no_low }}</td></tr>{% endfor %}
-    </table></div>
-  </section>
-
-  <section class="panel">
     <h2>{{ t.stale_h }}</h2>
-    <div class="tbl-wrap"><table>
+    <div class="tbl-wrap scroll"><table>
       <tr><th>{{ t.th_facility }}</th><th>{{ t.th_district }}</th><th>{{ t.th_last }}</th></tr>
       {% for f in stale %}
       <tr><td><b>{{ f.name }}</b></td><td>{{ f.district }}</td>
-          <td class="muted">{{ f.last|ago if f.last else t.never }}</td></tr>
+          <td class="muted nw">{{ f.last|ago if f.last else t.never }}</td></tr>
       {% else %}<tr><td colspan="3" class="muted">{{ t.no_stale }}</td></tr>{% endfor %}
     </table></div>
   </section>
 
-  <section class="panel">
-    <h2>{{ t.top_out_h }}</h2>
-    <div class="tbl-wrap"><table>
-      {% for r in top_out %}<tr><td><b>{{ r.name }}</b></td><td class="num">{{ r.n }} {{ t.facility_one if r.n == 1 else t.facility_many }}</td></tr>
-      {% else %}<tr><td class="muted">{{ t.no_out }}</td></tr>{% endfor %}
-    </table></div>
-  </section>
+  <div class="stack">
+    <section class="panel">
+      <h2>{{ t.top_out_h }}</h2>
+      <div class="tbl-wrap"><table>
+        {% for r in top_out %}<tr><td><b>{{ r.name }}</b></td><td class="num">{{ r.n }} {{ t.facility_one if r.n == 1 else t.facility_many }}</td></tr>
+        {% else %}<tr><td class="muted">{{ t.no_out }}</td></tr>{% endfor %}
+      </table></div>
+    </section>
 
-  <section class="panel">
-    <h2>{{ t.unmet_h }}</h2>
-    <div class="tbl-wrap"><table>
-      <tr><th>{{ t.th_query }}</th><th>{{ t.th_district }}</th><th>{{ t.th_times }}</th></tr>
-      {% for r in unmet %}<tr><td><b>{{ r.q }}</b></td><td>{{ r.district or t.district_all }}</td><td class="num">{{ r.n }}</td></tr>
-      {% else %}<tr><td colspan="3" class="muted">{{ t.no_unmet }}</td></tr>{% endfor %}
-    </table></div>
-  </section>
+    <section class="panel">
+      <h2>{{ t.unmet_h }}</h2>
+      <div class="tbl-wrap"><table>
+        <tr><th>{{ t.th_query }}</th><th>{{ t.th_district }}</th><th>{{ t.th_times }}</th></tr>
+        {% for r in unmet %}<tr><td><b>{{ r.q }}</b></td><td>{{ r.district or t.district_all }}</td><td class="num">{{ r.n }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">{{ t.no_unmet }}</td></tr>{% endfor %}
+      </table></div>
+    </section>
+  </div>
 </div>
 
 <section class="panel">
