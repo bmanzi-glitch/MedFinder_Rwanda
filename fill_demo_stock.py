@@ -29,7 +29,7 @@ def quantity_for(rng, ftype):
     if r < p_out:
         return 0
     if r < p_out + p_low:
-        return rng.randint(1, a.LOW_FRACTION_DEFAULT)
+        return rng.randint(1, a.LOW_FRACTION_DEFAULT - 1)
     return rng.randint(a.LOW_FRACTION_DEFAULT + 1, 300)
 
 
