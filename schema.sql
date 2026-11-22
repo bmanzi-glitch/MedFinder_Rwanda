@@ -103,3 +103,20 @@ CREATE TABLE IF NOT EXISTS login_attempt (
 );
 CREATE INDEX IF NOT EXISTS idx_login_attempt_phone ON login_attempt(phone, attempted_at);
 CREATE INDEX IF NOT EXISTS idx_login_attempt_ip ON login_attempt(ip, attempted_at);
+
+-- requests for a staff account, sent from the public form and reviewed by an administrator
+CREATE TABLE IF NOT EXISTS staff_request (
+    request_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL,
+    phone         TEXT NOT NULL,
+    job_title     TEXT,
+    facility_id   INTEGER REFERENCES facility(facility_id),
+    facility_name TEXT,                    -- typed by the applicant when their facility is not listed
+    district      TEXT,
+    message       TEXT,
+    status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+    created_at    TEXT NOT NULL,
+    handled_at    TEXT,
+    handled_by    INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_staff_request_status ON staff_request(status, created_at);

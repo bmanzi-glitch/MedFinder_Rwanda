@@ -229,7 +229,7 @@
     @media (min-width:720px) { .dirfilter { grid-template-columns:2fr 1fr 1fr auto; } }
     .cols { display:grid; gap:18px; margin:0 0 18px; }
     @media (min-width:1100px) { .cols { grid-template-columns:1fr 1fr; } }
-     .cols { align-items:start; }
+    .cols { align-items:start; }
     @media (min-width:1100px) {
       .cols { align-items:stretch; }
       .cols > .panel { display:flex; flex-direction:column; }
@@ -240,6 +240,13 @@
     .scroll { max-height:380px; overflow:auto; border-radius:10px; }
     .scroll th { position:sticky; top:0; background:var(--card); z-index:1; }
     td.nw { white-space:nowrap; }
+    .reqcard { display:grid; gap:10px 14px; grid-template-columns:1fr; padding:14px 0; border-bottom:1px solid #edf1ef; }
+    .reqcard:last-child { border-bottom:0; }
+    .reqmsg { margin:6px 0 0; padding:8px 12px; background:var(--paper); border-radius:10px; font-size:.92rem; }
+    .reqact { display:grid; gap:8px; grid-template-columns:1fr; align-items:center; }
+    .reqnote { margin:0; }
+    @media (min-width:900px) { .reqcard { grid-template-columns:1.2fr 1.4fr auto; align-items:start; } .reqact { grid-template-columns:1fr auto; } .reqact select { grid-column:1 / -1; } .reqnote { grid-column:1 / -1; } }
+    .side .badge { margin-left:auto; min-width:22px; height:22px; padding:0 7px; border-radius:99px; background:var(--sun); color:var(--sun-ink); font-size:.78rem; font-weight:700; display:inline-grid; place-items:center; }
     .cols table { min-width:0; }
     .hello { display:flex; align-items:center; gap:14px; background:var(--deep); color:#fff; border-radius:18px; padding:18px 22px; margin:0 0 18px; }
     .hello h1 { font-size:1.5rem; } .hello p { margin:2px 0 0; color:#b9d3cc; font-size:.92rem; }
@@ -297,6 +304,7 @@
 {%- elif name == 'pill' %}<path d="M10.5 20.5l-7-7a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7zM8.5 8.5l7 7"/>
 {%- elif name == 'box' %}<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>
 {%- elif name == 'logout' %}<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+{%- elif name == 'userplus' %}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6"/>
 {%- elif name == 'menu' %}<path d="M4 7h16M4 12h16M4 17h16"/>
 {%- elif name == 'close' %}<path d="M6 6l12 12M18 6L6 18"/>
 {%- endif -%}
@@ -329,6 +337,7 @@
         {% if session.role == 'admin' %}
         <a href="{{ url_for('admin_facilities') }}" {% if ep == 'admin_facilities' %}aria-current="page"{% endif %}>{{ ic('building') }}{{ t.nav_facilities }}</a>
         <a href="{{ url_for('admin_medicines') }}" {% if ep == 'admin_medicines' %}aria-current="page"{% endif %}>{{ ic('pill') }}{{ t.nav_medicines }}</a>
+        <a href="{{ url_for('admin_requests') }}" {% if ep == 'admin_requests' %}aria-current="page"{% endif %}>{{ ic('userplus') }}{{ t.nav_requests }}{% if pending_requests %}<span class="badge" aria-label="{{ pending_requests }}">{{ pending_requests }}</span>{% endif %}</a>
         {% endif %}
       {% endif %}
     </nav>
@@ -409,6 +418,7 @@
             <li><a href="{{ url_for('about') }}">{{ t.link_about }}</a></li>
             <li><a href="{{ url_for('faq') }}">{{ t.link_faq }}</a></li>
             {% if contact_ready %}<li><a href="{{ url_for('contact') }}">{{ t.link_contact }}</a></li>{% endif %}
+            {% if not session.user_id or session.role == 'user' %}<li><a href="{{ url_for('staff_request') }}">{{ t.foot_staff }}</a></li>{% endif %}
             <li><a href="{{ url_for('privacy') }}">{{ t.link_privacy }}</a></li>
             <li><a href="{{ url_for('terms') }}">{{ t.link_terms }}</a></li>
           </ul>

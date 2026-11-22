@@ -416,7 +416,67 @@ def build_strings(REMINDER_HOURS):
         },
     }
 
-    for _extra in (HOME_STRINGS, SITE_STRINGS, LOOK_STRINGS):
+    # Staff account requests (public form + admin review page).
+    REQ_STRINGS = {
+        "en": {
+            "req_title": "Request a staff account",
+            "req_lead": "For pharmacy and health center staff. An administrator checks every request before an account is created, then contacts you by phone.",
+            "req_name": "Your full name", "req_job": "Your job title", "req_facility": "Your facility",
+            "req_not_listed": "My facility is not listed",
+            "req_fname": "Facility name (only if it is not listed)", "req_district_note": "District (only if it is not listed)",
+            "req_msg": "Anything else we should know? (optional)", "req_submit": "Send request",
+            "req_sent": "Request sent. An administrator will review it and contact you on {phone}.",
+            "req_need_name": "Enter your name.",
+            "req_need_facility": "Choose your facility, or enter its name and district.",
+            "req_dup": "A request for this phone number is already waiting for review.",
+            "req_limit": "Too many requests from this connection. Try again later.",
+            "req_has_account": "This phone number already belongs to a staff or admin account.",
+            "req_have_account": "Already have a staff account?",
+            "nav_requests": "Requests", "req_admin_h": "Staff account requests",
+            "req_pending_h": "Waiting for review", "req_none": "No requests are waiting.",
+            "req_done_h": "Recently handled", "th_applicant": "Applicant", "th_received": "Received",
+            "req_approve": "Approve and create account", "req_reject": "Reject",
+            "req_typed": "Typed by applicant", "req_register_first": "Not in the list? Register the facility first.",
+            "req_member_note": "Has a member account. It will be upgraded and keeps its PIN.",
+            "req_approved": "Account created. Tell {name} the PIN by phone.",
+            "req_upgraded": "Account upgraded to staff.", "req_rejected": "Request rejected.",
+            "req_handled": "This request was already handled.", "req_pick_facility": "Choose a facility.",
+            "req_st_approved": "Approved", "req_st_rejected": "Rejected",
+            "req_sms_ok": "MedFinder: your staff account request was approved. Log in with this phone number and the PIN you were given.",
+            "req_sms_no": "MedFinder: your staff account request was not approved.",
+            "foot_staff": "Request a staff account",
+        },
+        "rw": {
+            "req_title": "Saba konti y'umukozi",
+            "req_lead": "Ni iy'abakozi ba farumasi n'ibigo nderabuzima. Umuyobozi asuzuma buri busabe mbere yo gufungura konti, hanyuma akaguhamagara.",
+            "req_name": "Amazina yawe yose", "req_job": "Umwanya ukora", "req_facility": "Ikigo ukorera",
+            "req_not_listed": "Ikigo cyanjye nticyanditswe",
+            "req_fname": "Izina ry'ikigo (iyo kitanditswe gusa)", "req_district_note": "Akarere (iyo ikigo kitanditswe gusa)",
+            "req_msg": "Hari ikindi dukwiye kumenya? (si ngombwa)", "req_submit": "Ohereza ubusabe",
+            "req_sent": "Ubusabe bwoherejwe. Umuyobozi azabusuzuma akuhamagare kuri {phone}.",
+            "req_need_name": "Andika izina ryawe.",
+            "req_need_facility": "Hitamo ikigo cyawe, cyangwa wandike izina ryacyo n'akarere.",
+            "req_dup": "Hari ubusabe bw'iyi nimero buri gusuzumwa.",
+            "req_limit": "Hoherejwe ubusabe bwinshi buturutse kuri iyi murandasi. Ongera ugerageze nyuma.",
+            "req_has_account": "Iyi nimero isanzwe ifite konti y'umukozi cyangwa y'umuyobozi.",
+            "req_have_account": "Usanzwe ufite konti y'umukozi?",
+            "nav_requests": "Ubusabe", "req_admin_h": "Ubusabe bwa konti z'abakozi",
+            "req_pending_h": "Buri gusuzumwa", "req_none": "Nta busabe buri gusuzumwa.",
+            "req_done_h": "Ubwasuzumwe vuba", "th_applicant": "Usaba", "th_received": "Bwoherejwe",
+            "req_approve": "Emeza ukore konti", "req_reject": "Anga",
+            "req_typed": "Cyanditswe n'usaba", "req_register_first": "Ntikiri ku rutonde? Banza ukandikishe ikigo.",
+            "req_member_note": "Afite konti y'umunyamuryango. Izahindurwa kandi igumana PIN yayo.",
+            "req_approved": "Konti yaremwe. Bwira {name} PIN kuri telefone.",
+            "req_upgraded": "Konti yahinduwe iy'umukozi.", "req_rejected": "Ubusabe bwanzwe.",
+            "req_handled": "Ubu busabe bwamaze gusuzumwa.", "req_pick_facility": "Hitamo ikigo.",
+            "req_st_approved": "Bwemewe", "req_st_rejected": "Bwanzwe",
+            "req_sms_ok": "MedFinder: ubusabe bwawe bwa konti y'umukozi bwemewe. Injira ukoresheje iyi nimero na PIN wahawe.",
+            "req_sms_no": "MedFinder: ubusabe bwawe bwa konti y'umukozi ntibwemewe.",
+            "foot_staff": "Saba konti y'umukozi",
+        },
+    }
+
+    for _extra in (HOME_STRINGS, SITE_STRINGS, LOOK_STRINGS, REQ_STRINGS):
         for _lang, _text in _extra.items():
             STRINGS[_lang].update(_text)
     return STRINGS

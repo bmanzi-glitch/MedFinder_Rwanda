@@ -72,6 +72,7 @@ CONTACT = {"email": os.environ.get("MEDFINDER_CONTACT_EMAIL", "").strip(),
            "address": os.environ.get("MEDFINDER_CONTACT_ADDRESS", "").strip()}
 RW_MOBILE = re.compile(r"^07[2389]\d{7}$")     # 072, 073, 078 or 079 followed by 7 digits
 SIGNUPS_PER_HOUR = 10                          # per network address
+STAFF_REQUESTS_PER_HOUR = 5                    # per network address
 PAGE_SIZE = 30                                 # facilities per page in the directory
 
 # Slowing down PIN guessing
@@ -174,9 +175,16 @@ def inject_globals():
         args = request.args.to_dict()
         args["lang"] = code
         return request.path + "?" + urlencode(args)       # works for every page, including /facility/3 and 404
+    pending_requests = 0
+    if session.get("role") == "admin":           # badge on the Requests link in the side menu
+        try:
+            pending_requests = db().execute("SELECT COUNT(*) FROM staff_request WHERE status='pending'").fetchone()[0]
+        except sqlite3.Error:
+            pending_requests = 0
     return {"t": STRINGS[current_lang()], "lang": current_lang(),
             "lang_url": lang_url, "csrf_token": csrf_token,
             "contact": CONTACT, "contact_ready": any(CONTACT.values()),
+            "pending_requests": pending_requests,
             "year": datetime.now(timezone.utc).year}
 
 
@@ -972,6 +980,138 @@ def admin_staff_add():
     return redirect(url_for("admin_facilities"))
 
 
+# ---------- staff account requests ----------
+@app.route("/staff-request", methods=["GET", "POST"])
+def staff_request():
+    """Pharmacy and health-center staff ask for an account. Nothing is created until an administrator approves."""
+    if session.get("role") in ("staff", "admin", "manager"):
+        return redirect(home_for(session["role"]))
+    c = db()
+    facilities = c.execute("SELECT facility_id, name, district FROM facility WHERE is_active=1 "
+                           "ORDER BY district, name").fetchall()
+    form = {"name": session.get("name", ""), "phone": "", "job_title": "", "facility_id": "",
+            "facility_name": "", "district": "", "message": ""}
+    if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+        f = request.form
+        raw_phone = f.get("phone", "")
+        phone = normalize_phone(raw_phone)
+        form = {"name": f.get("name", "").strip()[:60], "phone": raw_phone[:20],
+                "job_title": f.get("job_title", "").strip()[:60], "facility_id": f.get("facility_id", ""),
+                "facility_name": f.get("facility_name", "").strip()[:80],
+                "district": f.get("district", "").strip()[:40], "message": f.get("message", "").strip()[:300]}
+        hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(timespec="seconds")
+        recent = c.execute("SELECT COUNT(*) FROM login_attempt WHERE phone='staffreq' AND ip=? AND attempted_at>?",
+                           (ip, hour_ago)).fetchone()[0]
+        try:
+            fid = int(form["facility_id"])
+        except ValueError:
+            fid = 0
+        listed = c.execute("SELECT 1 FROM facility WHERE facility_id=? AND is_active=1", (fid,)).fetchone() if fid else None
+        existing = c.execute("SELECT role FROM user WHERE phone=?", (phone,)).fetchone()
+        error = None
+        if recent >= STAFF_REQUESTS_PER_HOUR:
+            error = "req_limit"
+        elif not form["name"]:
+            error = "req_need_name"
+        elif not RW_MOBILE.match(phone):
+            error = "signup_bad_phone"
+        elif fid and not listed:
+            error = "req_need_facility"
+        elif not fid and not (form["facility_name"] and form["district"]):
+            error = "req_need_facility"
+        elif existing and existing["role"] != "user":
+            error = "req_has_account"
+        elif c.execute("SELECT 1 FROM staff_request WHERE phone=? AND status='pending'", (phone,)).fetchone():
+            error = "req_dup"
+        if error:
+            flash(tr(error))
+            return render_template("staff_request.html", form=form, facilities=facilities), 200
+        c.execute("""INSERT INTO staff_request(name, phone, job_title, facility_id, facility_name, district,
+                                               message, created_at) VALUES (?,?,?,?,?,?,?,?)""",
+                  (form["name"], phone, form["job_title"] or None, fid or None,
+                   None if fid else form["facility_name"], None if fid else form["district"],
+                   form["message"] or None, now_iso()))
+        c.execute("INSERT INTO login_attempt(phone, ip, attempted_at) VALUES ('staffreq',?,?)", (ip, now_iso()))
+        c.commit()
+        flash(tr("req_sent").format(phone=phone))
+        return redirect(url_for("home"))
+    return render_template("staff_request.html", form=form, facilities=facilities)
+
+
+@app.route("/admin/requests")
+@login_required("admin")
+def admin_requests():
+    c = db()
+    base = """SELECT r.*, f.name AS fname, f.district AS fdistrict
+              FROM staff_request r LEFT JOIN facility f ON f.facility_id = r.facility_id"""
+    pending = c.execute(base + " WHERE r.status='pending' ORDER BY r.created_at").fetchall()
+    done = c.execute(base + " WHERE r.status!='pending' ORDER BY r.handled_at DESC LIMIT 20").fetchall()
+    facilities = c.execute("SELECT facility_id, name, district FROM facility WHERE is_active=1 "
+                           "ORDER BY district, name").fetchall()
+    members = {r["phone"] for r in c.execute("SELECT phone FROM user WHERE role='user'")}
+    return render_template("admin_requests.html", pending=pending, done=done, facilities=facilities, members=members)
+
+
+@app.route("/admin/requests/<int:rid>/approve", methods=["POST"])
+@login_required("admin")
+def admin_request_approve(rid):
+    """Create the staff account (an existing member account is upgraded and keeps its PIN)."""
+    c = db()
+    req = c.execute("SELECT * FROM staff_request WHERE request_id=?", (rid,)).fetchone()
+    if not req:
+        abort(404)
+    if req["status"] != "pending":
+        flash(tr("req_handled"))
+        return redirect(url_for("admin_requests"))
+    try:
+        fid = int(request.form.get("facility_id", ""))
+    except ValueError:
+        fid = 0
+    if not c.execute("SELECT 1 FROM facility WHERE facility_id=? AND is_active=1", (fid,)).fetchone():
+        flash(tr("req_pick_facility"))
+        return redirect(url_for("admin_requests"))
+    existing = c.execute("SELECT user_id, role FROM user WHERE phone=?", (req["phone"],)).fetchone()
+    if existing:
+        if existing["role"] != "user":
+            flash(tr("req_has_account"))
+            return redirect(url_for("admin_requests"))
+        c.execute("UPDATE user SET role='staff', facility_id=?, job_title=? WHERE user_id=?",
+                  (fid, req["job_title"], existing["user_id"]))
+        message = tr("req_upgraded")
+    else:
+        err = create_staff(c, req["name"], req["phone"], request.form.get("pin", ""), fid, req["job_title"] or "")
+        if err:
+            c.rollback()
+            flash(tr(err))
+            return redirect(url_for("admin_requests"))
+        message = tr("req_approved").format(name=req["name"])
+    c.execute("UPDATE staff_request SET status='approved', facility_id=?, handled_at=?, handled_by=? WHERE request_id=?",
+              (fid, now_iso(), session["user_id"], rid))
+    c.commit()
+    send_sms(req["phone"], STRINGS["en"]["req_sms_ok"] + " / " + STRINGS["rw"]["req_sms_ok"])
+    flash(message)
+    return redirect(url_for("admin_requests"))
+
+
+@app.route("/admin/requests/<int:rid>/reject", methods=["POST"])
+@login_required("admin")
+def admin_request_reject(rid):
+    c = db()
+    req = c.execute("SELECT * FROM staff_request WHERE request_id=?", (rid,)).fetchone()
+    if not req:
+        abort(404)
+    if req["status"] != "pending":
+        flash(tr("req_handled"))
+        return redirect(url_for("admin_requests"))
+    c.execute("UPDATE staff_request SET status='rejected', handled_at=?, handled_by=? WHERE request_id=?",
+              (now_iso(), session["user_id"], rid))
+    c.commit()
+    send_sms(req["phone"], STRINGS["en"]["req_sms_no"] + " / " + STRINGS["rw"]["req_sms_no"])
+    flash(tr("req_rejected"))
+    return redirect(url_for("admin_requests"))
+
+
 @app.route("/admin/medicines", methods=["GET", "POST"])
 @login_required("admin")
 def admin_medicines():
@@ -1058,7 +1198,7 @@ def sms_inbound():
     if len(tokens) < 2:
         return Response(STRINGS[lang]["sms_help"], mimetype="text/plain")
     med_words, district = tokens[:-1], tokens[-1]
-  
+    # "amoxicillin 250mg" -> try the full text first, then drop words from the end until something matches
     results = []
     for n in range(len(med_words), 0, -1):
         results = search_stock(" ".join(med_words[:n]), district)
@@ -1069,5 +1209,5 @@ def sms_inbound():
 
 
 if __name__ == "__main__":
-
+    # Debug mode shows an interactive console to anyone who can reach the page, so it is opt-in.
     app.run(debug=os.environ.get("MEDFINDER_DEBUG") == "1", use_reloader=False)

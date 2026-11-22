@@ -8,7 +8,7 @@
 
 {% block head %}
 <style>
-
+  /* ---------- sections below the hero ---------- */
   .home { display:grid; gap:72px; padding:64px 0 8px; }
   @media (max-width:900px) { .home { padding:44px 0 4px; gap:52px; } }
   .sec-h { margin:0 0 6px; font-size:clamp(1.5rem,3.2vw,2.1rem); letter-spacing:-.02em; }
@@ -269,7 +269,7 @@
           <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{{ t[k] }}</li>
           {% endfor %}
         </ul>
-        <a class="go" href="{{ url_for('contact') if contact_ready else url_for('about') }}">{{ t.staff_cta }}</a>
+        <a class="go" href="{{ url_for('staff_request') }}">{{ t.staff_cta }}</a>
       </div>
     </section>
 
@@ -315,9 +315,10 @@
   var near = document.getElementById('near'), msg = document.getElementById('geo-msg');
   var latI = document.getElementById('lat'), lngI = document.getElementById('lng');
   var sortSel = document.getElementById('sort');
-  var waitText = document.getElementById('geo-wait-text').getAttribute('data-text');
-  var failText = document.getElementById('geo-fail-text').getAttribute('data-text');
-  var T = { wait: waitText, fail: failText };
+  var T = {
+    wait: "{{ t.geo_wait|e }}",
+    fail: "{{ t.geo_fail|e }}"
+  };
   function locate() {
     if (!navigator.geolocation) { msg.textContent = T.fail; return; }
     msg.textContent = T.wait; near.disabled = true;
@@ -336,7 +337,7 @@
     if (!latI.value) { latI.disabled = true; lngI.disabled = true; }
   });
 
-
+  /* ---- map: Leaflet + OpenStreetMap, loaded only when the Map tab is opened ---- */
   var dataEl = document.getElementById('map-data');
   if (!dataEl) { return; }
   var pts = JSON.parse(dataEl.textContent), C = JSON.parse(document.getElementById('map-cfg').textContent);

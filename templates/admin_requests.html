@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ t.req_admin_h }} - {{ t.title }}{% endblock %}
+{% block body %}
+<div class="hello">
+  <span class="ico" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M22 11h-6"/></svg></span>
+  <div class="grow"><h1>{{ t.req_admin_h }}</h1><p>{{ t.admin_h }}</p></div>
+</div>
+
+<section class="panel">
+  <h2>{{ t.req_pending_h }} ({{ pending|length }})</h2>
+  {% for r in pending %}
+  <article class="reqcard">
+    <div class="reqinfo">
+      <b>{{ r.name }}</b> <span class="muted">{{ r.phone }}{% if r.job_title %} &middot; {{ r.job_title }}{% endif %}</span>
+      <div class="muted">
+        {% if r.fname %}{{ r.fname }} ({{ r.fdistrict }})
+        {% else %}{{ t.req_typed }}: {{ r.facility_name }}, {{ r.district }}{% endif %}
+        &middot; {{ r.created_at|kigali }}
+      </div>
+      {% if r.message %}<p class="reqmsg">{{ r.message }}</p>{% endif %}
+      {% if r.phone in members %}<p class="muted">{{ t.req_member_note }}</p>{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('admin_request_approve', rid=r.request_id) }}" class="reqact">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <select class="inp" name="facility_id" aria-label="{{ t.req_facility }}" required>
+        {% if not r.facility_id %}<option value="">{{ t.req_facility }}</option>{% endif %}
+        {% for f in facilities %}<option value="{{ f.facility_id }}" {{ 'selected' if r.facility_id == f.facility_id }}>{{ f.name }} ({{ f.district }})</option>{% endfor %}
+      </select>
+      {% if r.phone not in members %}
+      <input class="inp" name="pin" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" aria-label="{{ t.s_pin }}" required>
+      {% endif %}
+      <button class="btn sm"{% if r.phone in members %} style="grid-column:1 / -1"{% endif %}>{{ t.req_approve }}</button>
+    </form>
+    <form method="post" action="{{ url_for('admin_request_reject', rid=r.request_id) }}" class="reqrej">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn ghost sm">{{ t.req_reject }}</button>
+    </form>
+    {% if not r.facility_id %}<p class="muted reqnote">{{ t.req_register_first }} <a href="{{ url_for('admin_facilities') }}">{{ t.nav_facilities }}</a></p>{% endif %}
+  </article>
+  {% else %}
+  <p class="muted" style="margin:0">{{ t.req_none }}</p>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>{{ t.req_done_h }}</h2>
+  <div class="tbl-wrap"><table>
+    <tr><th>{{ t.th_applicant }}</th><th>{{ t.th_facility }}</th><th>{{ t.th_status }}</th><th>{{ t.updated }}</th></tr>
+    {% for r in done %}
+    <tr>
+      <td><b>{{ r.name }}</b> <span class="muted">{{ r.phone }}</span></td>
+      <td>{% if r.fname %}{{ r.fname }}{% else %}{{ r.facility_name }}{% endif %}</td>
+      <td>{{ t.req_st_approved if r.status == 'approved' else t.req_st_rejected }}</td>
+      <td class="muted nw" title="{{ r.handled_at|kigali }}">{{ r.handled_at|ago }}</td>
+    </tr>
+    {% else %}<tr><td colspan="4" class="muted">{{ t.req_none }}</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% endblock %}
