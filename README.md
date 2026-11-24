@@ -6,9 +6,9 @@ MedFinder Rwanda is a web app that tells people which pharmacy, health center or
 
 The site works in **English and Kinyarwanda**, on phones and computers, and also by **SMS and USSD** for people without a smartphone.
 
-> Status: working prototype with demo data. Real SMS delivery and public hosting are not set up yet (see [Known limitations](#known-limitations)).
-
----
+> Live demo: https://medfinder-rwanda-awqm.onrender.com
+> (free hosting, so the first load after a quiet period can take about a minute)
+> Status: working prototype with demo data. Real SMS delivery is not set up yet (see [Known limitations](#known-limitations)).
 
 ## What it does
 
@@ -58,6 +58,9 @@ MedFinder_Rwanda/
 ├── migrate.py                Upgrades an older database in place (makes a backup first)
 ├── seed.py                   Creates a fresh database with demo data (DELETES the old one)
 ├── fill_demo_stock.py        Adds every medicine to the demo facilities
+├── export_facilities.py      Saves imported pharmacies to facilities_seed.csv
+├── load_facilities.py        Loads facilities_seed.csv into the database
+├── facilities_seed.csv       478 pharmacies imported from OpenStreetMap
 ├── import_medicines.py       Loads medicines from a CSV file
 ├── import_pharmacies.py      Imports facilities from OpenStreetMap
 ├── medicines_starter.csv     150 starter medicines
@@ -201,15 +204,15 @@ All 43 tests should pass. They cover search, roles and access, stock updates, al
 
 ## Deploying
 
-For a real server, install the packages, set the environment variables above, and run with gunicorn:
+The live demo runs on Render (free plan). Settings used:
 
-```
-gunicorn app:app
-```
+- Build command: `pip install -r requirements.txt`
+- Start command: `python seed.py && python import_medicines.py && python load_facilities.py && python fill_demo_stock.py --refresh && gunicorn app:app`
+- Environment variables: `SECRET_KEY`, `MEDFINDER_ENV=production`, `MEDFINDER_BEHIND_PROXY=1`, `PYTHON_VERSION=3.11.9`
 
-Put it behind HTTPS, keep `medfinder.db` on storage that is **backed up**, and avoid free hosts that erase files when they restart, because SQLite stores everything in that one file.
+Render's free plan erases files when the service restarts, so the start command rebuilds the demo database each time. Anything entered by hand is lost on restart. For a real pilot, use a host with a persistent disk or a hosted database, and keep `medfinder.db` backed up.
 
----
+Render blocks the OpenStreetMap import at startup, so pharmacies are saved once from a local database with `python export_facilities.py` and loaded from `facilities_seed.csv`.
 
 ## Security and privacy
 
