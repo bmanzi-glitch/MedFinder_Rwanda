@@ -252,6 +252,11 @@
     .hello h1 { font-size:1.5rem; } .hello p { margin:2px 0 0; color:#b9d3cc; font-size:.92rem; }
     .hello .ico { flex:none; width:46px; height:46px; border-radius:14px; background:#ffffff1f; display:grid; place-items:center; color:var(--sun); }
     .hello .grow { flex:1; min-width:0; }
+        @media (max-width:640px) {
+      .hello { flex-wrap:wrap; }
+      .hello form { flex:1 1 100%; }
+      .hello form select { max-width:none !important; flex:1; }
+    }
     .hello form select { background:#fff; }
     .pager { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:18px 0 0; }
     .back { font-weight:600; color:var(--teal); text-decoration:none; }
